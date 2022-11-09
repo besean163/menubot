@@ -1,0 +1,170 @@
+<?php
+
+namespace lib;
+
+use Exception;
+use GuzzleHttp\Client;
+use GuzzleHttp\Cookie\CookieJar;
+use GuzzleHttp\RequestOptions;
+
+class ObedApi
+{
+	private string $login;
+	private string $password;
+	private CookieJar $cookies;
+	private Client $client;
+
+	private static array $needCookies = [
+		'PHPSESSID',
+		'uid',
+		's_id',
+		's_pass'
+	];
+
+	private const BASE_URL = 'https://www.obed.ru/';
+
+	public function __construct(string $login, string $password)
+	{
+		$this->login = $login;
+		$this->password = $password;
+		$this->client = new Client();
+		$this->setCookies();
+	}
+
+	private function setCookies(): void
+	{
+		$params = [
+			RequestOptions::FORM_PARAMS => [
+				'f_login' => $this->login,
+				'f_password' => $this->password
+			],
+			RequestOptions::ALLOW_REDIRECTS => false
+		];
+		$response = $this->client->post(self::BASE_URL, $params);
+		$headers = $response->getHeaders();
+
+		$cookies = [];
+		foreach ($headers['Set-Cookie'] as $cookieString) {
+			$cookieData = explode('; ', $cookieString);
+			$cookie = [];
+			foreach ($cookieData as $key => $cookieDataString) {
+				$cookieParams = explode('=', $cookieDataString);
+				$paramName = $cookieParams[0];
+				$paramValue = $cookieParams[1] ?? 'delete';
+				if ($key == 0) {
+					if (!in_array($paramName, self::$needCookies) || strstr($paramValue, 'delete')) {
+						break;
+					}
+					$cookie['Name'] = $paramName;
+					$cookie['Value'] = $paramValue;
+				} else {
+					$paramName = ucfirst($paramName);
+					$cookie[$paramName] = $paramValue;
+				}
+			}
+
+			if (!empty($cookie)) {
+				array_push($cookies, $cookie);
+			}
+		}
+		$this->cookies = new CookieJar(false, $cookies);
+	}
+
+	public function getCafeData(): array
+	{
+		$data = [];
+		$url = self::BASE_URL . 'obed';
+
+		$params = [
+			RequestOptions::COOKIES => $this->cookies
+		];
+		$response = $this->client->get($url, $params);
+		$page = $response->getBody()->getContents();
+
+		$namePattern = '/<div class="ob-h3 text-no-wrap">(.+?)<\/div>/';
+		$pathPattern = '/<a class="item-card" href="(.+)">/';
+		preg_match_all($namePattern, $page, $names);
+		preg_match_all($pathPattern, $page, $paths);
+
+		$names = $names[1];
+		$paths = $paths[1];
+		for ($i = 0; $i < count($names); $i++) {
+			$idPattern = "/\/suppliers\/(.+)\/menu/";
+			preg_match($idPattern, $paths[$i], $idMatch);
+			$id = $idMatch[1];
+			$orderIdPattern = "/order_id=(.+)/";
+			preg_match($orderIdPattern, $paths[$i], $orderIdMatch);
+			$orderId = $orderIdMatch[1];
+
+			array_push($data, [
+				'name' => $names[$i],
+				'id' => $id,
+				'orderId' => $orderId,
+				'path' => $paths[$i],
+			]);
+		}
+		// print_r($data);
+		return $data;
+	}
+
+	function getMenuList(string $date): string
+	{
+		$cafesData = $this->getCafeData();
+
+
+		$params = [
+			RequestOptions::QUERY => [
+				'date' => $date
+			],
+			RequestOptions::COOKIES => $this->cookies
+		];
+
+		$dishNamePattern = '/class="ob-supplier-complex-tile__title\s\C+?>(\C+?)</';
+		$weightPattern = '/<span class="ob-supplier-complex-tile__grams">\((.+?)\)/';
+		$costPattern = '/<input type="hidden" class="price_.+?value="(.+?)"/';
+		$menu = '';
+		foreach ($cafesData as $cafeData) {
+			$url = self::BASE_URL . 'suppliers/' . $cafeData['id'] . '/menu';
+			$response = $this->client->get($url, $params);
+			$page = $response->getBody()->getContents();
+			preg_match_all($dishNamePattern, $page, $dishNameMatches);
+			preg_match_all($weightPattern, $page, $weightMatches);
+			preg_match_all($costPattern, $page, $costMatches);
+			$menu .= $cafeData['name'] . ':' . "\n";
+			$dishes = $dishNameMatches[1];
+			$weights = $weightMatches[1];
+			$costs = $costMatches[1];
+			for ($i = 0; $i < count($dishes); $i++) {
+				$numberPart = str_pad(sprintf("  %d.", $i + 1), 5);
+				$namePart = self::mb_str_pad(sprintf("%s", $dishes[$i]), 55);
+				$weightPart = self::mb_str_pad(sprintf("(%s)", $weights[$i]), 15);
+				$costPart = self::mb_str_pad(sprintf("- %.2f руб.", floatval($costs[$i])), 10);
+				$menu .= sprintf(
+					"%s%s%s%s\n",
+					$numberPart,
+					$namePart,
+					$weightPart,
+					$costPart
+				);
+				// $menu .= sprintf(
+				// 	"\t%d. %s (%s) - %.2f руб.\n",
+				// 	$i + 1,
+				// 	$dishes[$i],
+				// 	$weights[$i],
+				// 	floatval($costs[$i])
+				// );
+			}
+			if (next($cafeData) !== false) {
+				$menu .= "\n";
+			}
+		}
+
+		return $menu;
+	}
+
+	private static function mb_str_pad($input, $pad_length, $pad_string = ' ', $pad_type = STR_PAD_RIGHT)
+	{
+		$diff = strlen($input) - mb_strlen($input);
+		return str_pad($input, $pad_length + $diff, $pad_string, $pad_type);
+	}
+}
