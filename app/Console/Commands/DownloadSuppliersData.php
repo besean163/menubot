@@ -64,7 +64,10 @@ class DownloadSuppliersData extends Command
 		$foodSupplier = FoodSupplier::first();
 
 		// $api->getMenuList($foodSupplier->sourceId, '2022-12-05');
-		Log::info($api->getMenuList($foodSupplier->sourceId, '2022-12-05'));
+		// Log::info($api->getMenuList($foodSupplier->sourceId, '2022-12-05'));
+		$fs = FoodSupplier::query()->getQuery()->whereIn('id', [13, 14])->get(['name']);
+
+		Log::info($fs);
 
 		return Command::SUCCESS;
 	}
