@@ -4,6 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\FoodSupplier;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
+use Longman\TelegramBot\Request;
+use Longman\TelegramBot\Telegram;
 
 class TestSome extends Command
 {
@@ -29,11 +32,19 @@ class TestSome extends Command
 	public function handle()
 	{
 		$botToken = '1858930058:AAFRaVAE3XyxFsiREylp9WKP-BXDiuZ5cms';
-		$foodSupplier = FoodSupplier::create([
-			'name' => 'testFoodSupplier',
-			'sourceId' => 'someId',
+		$telegram = new Telegram($botToken);
+		Request::initialize($telegram);
+		$response = Request::sendMessage([
+			'chat_id' => '275665865',
+			'text' => 'lib work'
 		]);
-		$foodSupplier->save();
+		Log::info($response);
+		// Log::info('here');
+		// $foodSupplier = FoodSupplier::create([
+		// 	'name' => 'testFoodSupplier',
+		// 	'sourceId' => 'someId',
+		// ]);
+		// $foodSupplier->save();
 		return Command::SUCCESS;
 	}
 }

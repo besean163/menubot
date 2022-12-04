@@ -2,10 +2,12 @@
 
 namespace lib;
 
+use App\Models\FoodCategory;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\RequestOptions;
+use Illuminate\Support\Facades\Log;
 
 class ObedApi
 {
@@ -99,15 +101,15 @@ class ObedApi
 			array_push($data, [
 				'name' => $names[$i],
 				'id' => $id,
-				'orderId' => $orderId,
-				'path' => $paths[$i],
+				// 'orderId' => $orderId,
+				// 'path' => $paths[$i],
 			]);
 		}
 		// print_r($data);
 		return $data;
 	}
 
-	function getMenuList(string $date): string
+	/* function getMenuList(string $date): string
 	{
 		$cafesData = $this->getCafeData();
 
@@ -156,6 +158,78 @@ class ObedApi
 			}
 			if (next($cafeData) !== false) {
 				$menu .= "\n";
+			}
+		}
+
+		return $menu;
+	} */
+
+	function getMenuList(string $foodSupplierId, string $date): array
+	{
+		$params = [
+			RequestOptions::QUERY => [
+				'date' => $date
+			],
+			RequestOptions::COOKIES => $this->cookies
+		];
+		$menu = [];
+
+		$categoriesPattern = '/<p class="ob-supplier-complex__complex-title js-categories-title" id="(category_\d+)">(.+?)</';
+		$idCaloriesNamePattern = '/dish_name_(\d+).+?data-calorie="(\d+)">(.+?)</';
+		$weightDataPattern = '/<span class="ob-supplier-complex-tile__grams">\((.+?)\)/';
+		$costPattern = '/<input type="hidden" class="price_.+?value="(.+?)"/';
+		$ingredientPattern = '/id="dish_description_\d+">(.+?)</';
+
+		$url = self::BASE_URL . 'suppliers/' . $foodSupplierId . '/menu';
+		$response = $this->client->get($url, $params);
+		$page = $response->getBody()->getContents();
+
+		$categoriesParts = explode('<!-- Название категории -->', $page);
+		foreach ($categoriesParts as $categoriesPart) {
+			if (strpos($categoriesPart, '<!-- Наименование блюда -->') === false) {
+				continue;
+			}
+			// Log::notice('here');
+
+			preg_match($categoriesPattern, $categoriesPart, $categoryMatches);
+
+			// Log::notice($categoryMatches);
+			// exit;
+
+			$categoryId = $categoryMatches[1];
+			$categoryName = $categoryMatches[2];
+
+			$category = FoodCategory::firstOrCreate([
+				'name' => $categoryName,
+				'sourceId' => $categoryId,
+			]);
+
+			preg_match_all($idCaloriesNamePattern, $categoriesPart, $idCaloriesNameMatches);
+			preg_match_all($weightDataPattern, $categoriesPart, $weightDataMatches);
+			preg_match_all($costPattern, $categoriesPart, $costMatches);
+			preg_match_all($ingredientPattern, $categoriesPart, $ingredientMatches);
+
+			$dishIds = $idCaloriesNameMatches[1];
+			$dishesCalories = $idCaloriesNameMatches[2];
+			$dishNames = $idCaloriesNameMatches[3];
+			$weightSets = $weightDataMatches[1];
+			$costs = $costMatches[1];
+			$ingredientSets = $ingredientMatches[1];
+			for ($i = 0; $i < count($dishIds); $i++) {
+				$weightData = explode(' ', $weightSets[$i]);
+				$weight = $weightData[0];
+				$weightDimension = $weightData[1];
+				$dishData = [
+					'categoryId' => $category->id,
+					'name' => trim($dishNames[$i]),
+					'id' => $dishIds[$i],
+					'weight' => $weight,
+					'weightDimension' => $weightDimension,
+					'price' => (float) $costs[$i],
+					'calories' => $dishesCalories[$i],
+					'ingredients' => trim($ingredientSets[$i])
+				];
+				array_push($menu, $dishData);
 			}
 		}
 
