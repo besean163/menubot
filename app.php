@@ -13,4 +13,4 @@ $date = '2022-12-05';
 
 $api = new ObedApi($login, $password);
 
-echo $api->getMenuList($date);
+echo $api->getMenuList('8166-lascala', $date);

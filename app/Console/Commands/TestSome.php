@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use lib\Date;
+use lib\ObedApi;
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Telegram;
 
@@ -33,19 +34,9 @@ class TestSome extends Command
 	 */
 	public function handle()
 	{
-		// $botToken = '1858930058:AAFRaVAE3XyxFsiREylp9WKP-BXDiuZ5cms';
-		// $telegram = new Telegram($botToken);
-		// Request::initialize($telegram);
-		// $response = Request::sendMessage([
-		// 	'chat_id' => '275665865',
-		// 	'text' => 'lib work'
-		// ]);
-		// Log::info($response);
+		$api = new ObedApi(env("OBED_LOGIN"), env("OBED_PASS"));
 
-		$thisWeedDays = Date::getThisWeekWorkDays();
-		Log::notice($thisWeedDays);
-		$nextWeedDays = Date::getNextWeekWorkDays();
-		Log::notice($nextWeedDays);
+		Log::info($api->getMenuList('8166-lascala', '2022-12-05'));
 		return Command::SUCCESS;
 	}
 }

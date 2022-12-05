@@ -72,5 +72,5 @@ class DownloadSuppliersData extends Command
 		return Command::SUCCESS;
 	}
 
-	private function 
+	// private function 
 }

@@ -199,6 +199,7 @@ class ObedApi
 			$categoryId = $categoryMatches[1];
 			$categoryName = $categoryMatches[2];
 
+			Log::info($categoryId);
 			$category = FoodCategory::firstOrCreate([
 				'name' => $categoryName,
 				'sourceId' => $categoryId,
@@ -216,20 +217,18 @@ class ObedApi
 			$costs = $costMatches[1];
 			$ingredientSets = $ingredientMatches[1];
 			for ($i = 0; $i < count($dishIds); $i++) {
+				$sourceId = trim($dishIds[$i]);
+				$name = trim($dishNames[$i]);
+				$price = (float) (trim($costs[$i]));
+				$calories = (float) (trim($dishesCalories[$i]));
+
 				$weightData = explode(' ', $weightSets[$i]);
-				$weight = $weightData[0];
-				$weightDimension = $weightData[1];
-				$dishData = [
-					'categoryId' => $category->id,
-					'sourceId' => $dishIds[$i],
-					'name' => trim($dishNames[$i]),
-					'weight' => $weight,
-					'weightDimension' => $weightDimension,
-					'price' => (float) $costs[$i],
-					'calories' => $dishesCalories[$i],
-					'ingredients' => trim($ingredientSets[$i])
-				];
-				array_push($menu, $dishData);
+				$weight = (float) (trim($weightData[0]));
+				$weightDimension = trim($weightData[1]);
+				$ingredients = explode(', ', trim($ingredientSets[$i]));
+
+				$dish = new Dish($category->id, $sourceId, $name, $weight, $weightDimension, $price, $calories, $ingredients);
+				array_push($menu, $dish);
 			}
 		}
 

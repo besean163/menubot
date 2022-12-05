@@ -2,34 +2,51 @@
 
 namespace lib;
 
+use App\Models\FoodCategory;
+
 class Dish
 {
+	const CATEGORY_ID = 'cid';
+	const SOURCE_ID = 'sid';
+	const NAME = 'n';
+	const WEIGHT = 'w';
+	const WEIGHT_DIMENSION = 'wd';
+	const PRICE = 'p';
+	const CALORIES = 'c';
+	const INGREDIENTS = 'i';
+
 	public int $categoryId;
-	public int $sourceId;
+	public string $sourceId;
 	public string $name;
 	public float $weight;
 	public string $weightDimension;
 	public float $price;
 	public float $calories;
-	public string $ingredients;
+	public array $ingredients;
 
-	// 'categoryId' => $category->id,
-	// 				'name' => trim($dishNames[$i]),
-	// 				'id' => $dishIds[$i],
-	// 				'weight' => $weight,
-	// 				'weightDimension' => $weightDimension,
-	// 				'price' => (float) $costs[$i],
-	// 				'calories' => $dishesCalories[$i],
-	// 				'ingredients' => trim($ingredientSets[$i])
-	public function __construct(array $config = [])
+	public function __construct(int $categoryId, string $sourceId, string $name, float $weight, string $weightDimension, float $price, float $calories, array $ingredients)
 	{
-		$this->categoryId = $config['categotyId'];
-		$this->sourceId = intval($config['sourceId']);
-		$this->name = trim($config['name']);
-		$this->weight = floatval($config['weight']);
-		$this->weightDimension = trim($config['weightDimension']);
-		$this->price = floatval($config['price']);
-		$this->calories = floatval($config['calories']);
-		$this->
+		$this->categoryId = $categoryId;
+		$this->sourceId = $sourceId;
+		$this->name = trim($name);
+		$this->weight = $weight;
+		$this->weightDimension = $weightDimension;
+		$this->price = $price;
+		$this->calories = $calories;
+		$this->ingredients = $ingredients;
+	}
+
+	public function toArray(): array
+	{
+		return [
+			self::CATEGORY_ID => $this->categoryId,
+			self::SOURCE_ID => $this->sourceId,
+			self::NAME => $this->name,
+			self::WEIGHT => $this->weight,
+			self::WEIGHT_DIMENSION => $this->weightDimension,
+			self::PRICE => $this->price,
+			self::CALORIES => $this->calories,
+			self::INGREDIENTS => $this->ingredients
+		];
 	}
 }
