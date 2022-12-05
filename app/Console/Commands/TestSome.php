@@ -6,6 +6,7 @@ use App\Models\FoodSupplier;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use lib\Date;
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Telegram;
 
@@ -32,20 +33,19 @@ class TestSome extends Command
 	 */
 	public function handle()
 	{
-		$botToken = '1858930058:AAFRaVAE3XyxFsiREylp9WKP-BXDiuZ5cms';
-		$telegram = new Telegram($botToken);
-		Request::initialize($telegram);
-		$response = Request::sendMessage([
-			'chat_id' => '275665865',
-			'text' => 'lib work'
-		]);
-		Log::info($response);
-		// Log::info('here');
-		// $foodSupplier = FoodSupplier::create([
-		// 	'name' => 'testFoodSupplier',
-		// 	'sourceId' => 'someId',
+		// $botToken = '1858930058:AAFRaVAE3XyxFsiREylp9WKP-BXDiuZ5cms';
+		// $telegram = new Telegram($botToken);
+		// Request::initialize($telegram);
+		// $response = Request::sendMessage([
+		// 	'chat_id' => '275665865',
+		// 	'text' => 'lib work'
 		// ]);
-		// $foodSupplier->save();
+		// Log::info($response);
+
+		$thisWeedDays = Date::getThisWeekWorkDays();
+		Log::notice($thisWeedDays);
+		$nextWeedDays = Date::getNextWeekWorkDays();
+		Log::notice($nextWeedDays);
 		return Command::SUCCESS;
 	}
 }

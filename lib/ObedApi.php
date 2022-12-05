@@ -221,8 +221,8 @@ class ObedApi
 				$weightDimension = $weightData[1];
 				$dishData = [
 					'categoryId' => $category->id,
+					'sourceId' => $dishIds[$i],
 					'name' => trim($dishNames[$i]),
-					'id' => $dishIds[$i],
 					'weight' => $weight,
 					'weightDimension' => $weightDimension,
 					'price' => (float) $costs[$i],

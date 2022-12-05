@@ -42,22 +42,22 @@ class DownloadSuppliersData extends Command
 		$api = new ObedApi(env("OBED_LOGIN"), env("OBED_PASS"));
 		$cafesData = $api->getCafeData();
 
-		// $foodSuppliers = new Collection();
-		// foreach ($cafesData as $cafeData) {
-		// 	$name = $cafeData['name'];
-		// 	$sourceId = $cafeData['id'];
-		// 	$foodSupplier = FoodSupplier::where('sourceId', $sourceId)->first();
-		// 	// Log::info(get_class($foodSupplier));
-		// 	if (!$foodSupplier) {
-		// 		Log::alert('here');
-		// 		$foodSupplier = FoodSupplier::create([
-		// 			'name' => $name,
-		// 			'sourceId' => $sourceId,
-		// 		]);
-		// 	}
+		$foodSuppliers = new Collection();
+		foreach ($cafesData as $cafeData) {
+			$name = $cafeData['name'];
+			$sourceId = $cafeData['id'];
+			$foodSupplier = FoodSupplier::where('sourceId', $sourceId)->first();
+			// Log::info(get_class($foodSupplier));
+			if (!$foodSupplier) {
+				Log::alert('here');
+				$foodSupplier = FoodSupplier::create([
+					'name' => $name,
+					'sourceId' => $sourceId,
+				]);
+			}
 
-		// 	$foodSuppliers->push($foodSupplier);
-		// }
+			$foodSuppliers->push($foodSupplier);
+		}
 
 		// Log::info($foodSuppliers);
 
@@ -71,4 +71,6 @@ class DownloadSuppliersData extends Command
 
 		return Command::SUCCESS;
 	}
+
+	private function 
 }
