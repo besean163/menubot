@@ -6,6 +6,7 @@ use App\Models\FoodSupplier;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
+use lib\Date;
 use lib\ObedApi;
 
 
@@ -28,6 +29,9 @@ class DownloadSuppliersData extends Command
 	 */
 	protected $description = 'Скачивает данные поставщиков еды.';
 
+	private ObedApi $api;
+	private Collection $foodSuppliers;
+
 	/**
 	 * Execute the console command.
 	 *
@@ -35,18 +39,31 @@ class DownloadSuppliersData extends Command
 	 */
 	public function handle()
 	{
-		/*
-		1. Скачиваем данные доступных ресторанов (имя, id для взаимодействия)
-		*/
+		$this->setApi();
+		$this->syncFoodSuppliers();
+		$this->syncDishes();
 
-		$api = new ObedApi(env("OBED_LOGIN"), env("OBED_PASS"));
-		$cafesData = $api->getCafeData();
+
+		return Command::SUCCESS;
+	}
+
+	private function setApi(): void
+	{
+		$this->api = new ObedApi(env("OBED_LOGIN"), env("OBED_PASS"));
+	}
+
+	private function syncFoodSuppliers(): void
+	{
+		$cafesData = $this->api->getCafeData();
 
 		$foodSuppliers = new Collection();
 		foreach ($cafesData as $cafeData) {
 			$name = $cafeData['name'];
 			$sourceId = $cafeData['id'];
-			$foodSupplier = FoodSupplier::where('sourceId', $sourceId)->first();
+			$foodSupplier = FoodSupplier::query()->firstOrCreate([
+				'sourceId' => $sourceId,
+				'name' => $name
+			]);
 			// Log::info(get_class($foodSupplier));
 			if (!$foodSupplier) {
 				Log::alert('here');
@@ -58,19 +75,27 @@ class DownloadSuppliersData extends Command
 
 			$foodSuppliers->push($foodSupplier);
 		}
-
-		// Log::info($foodSuppliers);
-
-		$foodSupplier = FoodSupplier::first();
-
-		// $api->getMenuList($foodSupplier->sourceId, '2022-12-05');
-		// Log::info($api->getMenuList($foodSupplier->sourceId, '2022-12-05'));
-		$fs = FoodSupplier::query()->getQuery()->whereIn('id', [13, 14])->get(['name']);
-
-		Log::info($fs);
-
-		return Command::SUCCESS;
+		$this->foodSuppliers = $foodSuppliers;
 	}
 
-	// private function 
+	private function syncDishes(): void
+	{
+		$dates = $this->needThisWeek() ? Date::getThisWeekWorkDays() : Date::getNextWeekWorkDays();
+
+		/** @var FoodSupplier $foodSupplier*/
+		foreach ($this->foodSuppliers as $foodSupplier) {
+			foreach ($dates as $date) {
+				$this->api->syncDishes($foodSupplier, $date);
+			}
+		}
+	}
+
+	private function needThisWeek(): bool
+	{
+		$todayWeekDay = Date::today()->getWeekDay();
+		if ($todayWeekDay == 7) {
+			return false;
+		}
+		return true;
+	}
 }

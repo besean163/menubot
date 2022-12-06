@@ -34,9 +34,16 @@ class TestSome extends Command
 	 */
 	public function handle()
 	{
-		$api = new ObedApi(env("OBED_LOGIN"), env("OBED_PASS"));
+		/* 
+			Диалог на получение меню:
+			1. Узнать дату (в виде меню представить пользователю)
+			2. Узнать категорию (в виде меню представить пользователю, нужны только те на которые есть блюда)
+			3. Показать
 
-		Log::info($api->getMenuList('8166-lascala', '2022-12-05'));
+			Как сохранять:
+			
+			
+		*/
 		return Command::SUCCESS;
 	}
 }

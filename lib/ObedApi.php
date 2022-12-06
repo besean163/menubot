@@ -2,7 +2,9 @@
 
 namespace lib;
 
+use App\Models\Dish;
 use App\Models\FoodCategory;
+use App\Models\FoodSupplier;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
@@ -164,7 +166,7 @@ class ObedApi
 		return $menu;
 	} */
 
-	function getMenuList(string $foodSupplierId, string $date): array
+	public function syncDishes(FoodSupplier $foodSupplier, string $date): void
 	{
 		$params = [
 			RequestOptions::QUERY => [
@@ -172,7 +174,6 @@ class ObedApi
 			],
 			RequestOptions::COOKIES => $this->cookies
 		];
-		$menu = [];
 
 		$categoriesPattern = '/<p class="ob-supplier-complex__complex-title js-categories-title" id="(category_\d+)">(.+?)</';
 		$idCaloriesNamePattern = '/dish_name_(\d+).+?data-calorie="(\d+)">(.+?)</';
@@ -180,7 +181,7 @@ class ObedApi
 		$costPattern = '/<input type="hidden" class="price_.+?value="(.+?)"/';
 		$ingredientPattern = '/id="dish_description_\d+">(.+?)</';
 
-		$url = self::BASE_URL . 'suppliers/' . $foodSupplierId . '/menu';
+		$url = self::BASE_URL . 'suppliers/' . $foodSupplier->sourceId . '/menu';
 		$response = $this->client->get($url, $params);
 		$page = $response->getBody()->getContents();
 
@@ -200,7 +201,7 @@ class ObedApi
 			$categoryName = $categoryMatches[2];
 
 			Log::info($categoryId);
-			$category = FoodCategory::firstOrCreate([
+			$category = FoodCategory::query()->firstOrCreate([
 				'name' => $categoryName,
 				'sourceId' => $categoryId,
 			]);
@@ -222,17 +223,15 @@ class ObedApi
 				$price = (float) (trim($costs[$i]));
 				$calories = (float) (trim($dishesCalories[$i]));
 
+				Log::alert($weightSets[$i]);
 				$weightData = explode(' ', $weightSets[$i]);
 				$weight = (float) (trim($weightData[0]));
-				$weightDimension = trim($weightData[1]);
-				$ingredients = explode(', ', trim($ingredientSets[$i]));
+				$weightDimension = trim($weightData[1] ?? '');
+				$ingredients = array_map('trim', explode(',', trim($ingredientSets[$i] ?? '')));
 
-				$dish = new Dish($category->id, $sourceId, $name, $weight, $weightDimension, $price, $calories, $ingredients);
-				array_push($menu, $dish);
+				Dish::make($foodSupplier->id, $date, $category->id, $sourceId, $name, $weight, $weightDimension, $price, $calories, $ingredients);
 			}
 		}
-
-		return $menu;
 	}
 
 	private static function mb_str_pad($input, $pad_length, $pad_string = ' ', $pad_type = STR_PAD_RIGHT)

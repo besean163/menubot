@@ -14,7 +14,7 @@ class Date extends DateTimeImmutable
 
 	public static function getThisWeekWorkDays(): array
 	{
-		$today = self::getToday();
+		$today = self::today();
 		$firstWeekDate = $today->getFirstWeekDayDate();
 		$days = self::dates($firstWeekDate, $firstWeekDate->addDays(4));
 
@@ -23,7 +23,7 @@ class Date extends DateTimeImmutable
 
 	public static function getNextWeekWorkDays(): array
 	{
-		$today = self::getToday();
+		$today = self::today();
 		$firstWeekDate = $today->getFirstWeekDayDate()->addDays(7);
 		$days = self::dates($firstWeekDate, $firstWeekDate->addDays(4));
 
@@ -48,7 +48,7 @@ class Date extends DateTimeImmutable
 	}
 
 
-	public static function getToday(): self
+	public static function today(): self
 	{
 		return new self('today');
 	}

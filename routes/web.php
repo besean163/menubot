@@ -5,8 +5,8 @@ use GuzzleHttp\RequestOptions;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
+use lib\Telegram\Telegram;
 use Longman\TelegramBot\Request as TelegramBotRequest;
-use Longman\TelegramBot\Telegram;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,29 +20,13 @@ use Longman\TelegramBot\Telegram;
 */
 
 Route::any('/', function (Request $request) {
+    $telegram = new Telegram(env('BOT_TOKEN'), 'DevelopBot');
 
-    Log::info(Request::method());
-    Log::info(Request::url());
-    // return view('welcome');
-    Log::info('in web.');
-    Log::info(Request::all());
-    // return [];
-    // $client = new Client();
-    // $params =
-    //     [
-    //         RequestOptions::HEADERS => [
-    //             "Content-Type" => "application/json"
-    //         ],
-    //         RequestOptions::BODY => json_encode([
-    //             "chat_id" => "275665865",
-    //             "text" => "work"
-    //         ]),
 
-    //     ];
-    // $client->post("https://api.telegram.org/bot1858930058:AAFRaVAE3XyxFsiREylp9WKP-BXDiuZ5cms/sendMessage", $params);
-    // return [
-    //     "chat_id" => "275665865",
-    //     "text" => "work"
-    // ];
-    // exit;
+    $telegram->handle();
+    // TelegramBotRequest::initialize($telegram);
+    // TelegramBotRequest::sendMessage([
+    //     'chat_id' => '275665865',
+    //     'text' => 'work'
+    // ]);
 });
