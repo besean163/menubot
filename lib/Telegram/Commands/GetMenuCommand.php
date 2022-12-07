@@ -42,7 +42,7 @@ class GetMenuCommand extends UserCommand
 
 		$foodSuppliers = FoodSupplier::all();
 		$foodSuppliers = FoodSupplier::query()->where('id', 1)->get();
-		$date = '2022-12-05';
+		$date = '2022-12-07';
 		$msg = '';
 
 		foreach ($foodSuppliers as $foodSupplier) {

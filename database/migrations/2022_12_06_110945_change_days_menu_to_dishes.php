@@ -15,18 +15,17 @@ return new class extends Migration
     {
         Schema::rename('days_menu', 'dishes');
         Schema::table('dishes', function (Blueprint $table) {
-            $table
-                ->dropColumn('list')
-                ->after('date', function (Blueprint $table) {
-                    $table->integer('categoryId');
-                    $table->string('sourceId');
-                    $table->string('name');
-                    $table->float('weight');
-                    $table->string('weightDimension');
-                    $table->float('price');
-                    $table->float('calories');
-                    $table->json('ingredients');
-                });
+            $table->dropColumn('list');
+            $table->after('date', function (Blueprint $table) {
+                $table->integer('categoryId');
+                $table->string('sourceId');
+                $table->string('name');
+                $table->float('weight');
+                $table->string('weightDimension');
+                $table->float('price');
+                $table->float('calories');
+                $table->json('ingredients');
+            });
         });
     }
 

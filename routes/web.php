@@ -2,11 +2,14 @@
 
 use GuzzleHttp\Client;
 use GuzzleHttp\RequestOptions;
+use Illuminate\Contracts\View\View;
+use Illuminate\Log\Logger;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
 use lib\Telegram\Telegram;
 use Longman\TelegramBot\Request as TelegramBotRequest;
+use Longman\TelegramBot\TelegramLog;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,14 +22,7 @@ use Longman\TelegramBot\Request as TelegramBotRequest;
 |
 */
 
-Route::any('/', function (Request $request) {
-    $telegram = new Telegram(env('BOT_TOKEN'), 'DevelopBot');
-
-
-    $telegram->handle();
-    // TelegramBotRequest::initialize($telegram);
-    // TelegramBotRequest::sendMessage([
-    //     'chat_id' => '275665865',
-    //     'text' => 'work'
-    // ]);
+Route::get('/', function (Request $request) {
+    // return view('welcome');
+    return '';
 });
