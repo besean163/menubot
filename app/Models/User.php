@@ -15,4 +15,11 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 class User extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'telegramName',
+        'telegramId',
+        'firstName',
+        'lastName'
+    ];
 }

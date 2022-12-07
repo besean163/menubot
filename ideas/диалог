@@ -16,11 +16,13 @@
 			'type' => 'date_select',
 			'result' => '2022-12-05'
 			'status' => 'finish',
+			'message_id' => null
 		],
 		'action_2' => [
 			'type' => 'category_select',
 			'result' => null,
 			'status' => 'wait'
+			'message_id' => 2344 - id сообщения в котором задавался вопрос (нужно для удаления), должен быть null когда finish
 		]
 	]
 

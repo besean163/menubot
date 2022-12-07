@@ -38,6 +38,13 @@ class GetMenuCommand extends UserCommand
 	 */
 	public function execute(): ServerResponse
 	{
+		// получить пользователя
+		// получить чат
+		// создать диалог (про статус не забыть)
+		// создать действие
+		// сформировать сообщение для пользователя отправить
+
+
 		$chatId = $this->getUpdate()->getMessage()->getChat()->getId();
 
 		$foodSuppliers = FoodSupplier::all();
