@@ -2,11 +2,15 @@
 
 namespace lib\Telegram;
 
+use App\Models\Chat;
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Facades\Log;
 use lib\Telegram\Commands\GetMenuCommand;
 use lib\Telegram\Commands\StartCommand;
-use Longman\TelegramBot\Commands\Command;
+use lib\Telegram\Dialogs\Dialog;
+use Longman\TelegramBot\Commands\AdminCommand;
+use Longman\TelegramBot\Commands\SystemCommand;
 use Longman\TelegramBot\DB;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Entities\Update;
@@ -17,6 +21,10 @@ use Longman\TelegramBot\TelegramLog;
 
 class Telegram extends BaseTelegram
 {
+	public User $user;
+	public Chat $chat;
+	public ?Dialog $dialog = null;
+
 	protected $command_classes = [
 		Command::AUTH_USER   => [
 			'start' => StartCommand::class,
@@ -31,41 +39,41 @@ class Telegram extends BaseTelegram
 		return $this->update;
 	}
 
-	public function haveDialog(): bool
-	{
-		return true;
-	}
-
-	public function handleDialog(): void
-	{
-		// получить диалог
-		// получить последнее не законченное действие
-		// проверить подходит ли ответ пользователя действию
-		// передать действию ответ пользователя
-	}
-
 	public function getUser(): User
 	{
-		return new User();
+		return $this->user;
 	}
 
-	/**
-	 * Handle bot request from webhook
-	 *
-	 * @return bool
-	 *
-	 * @throws TelegramException
-	 */
+	public function getChat(): Chat
+	{
+		return $this->chat;
+	}
+
 	public function handle(): bool
 	{
-		if ($response = $this->processUpdateCustom()) {
-			return $response->isOk();
+		$this->setSourceData();
+
+		$channelPost = $this->update->getChannelPost();
+		if ($channelPost) {
+			return false;
 		}
 
-		return false;
+		if ($this->dialog) {
+			return $this->dialog->handle();
+		} else {
+			return $this->simpleCommandHandle();
+		}
 	}
 
-	public function setUpdateData(): void
+	public function setSourceData(): void
+	{
+		$this->setUpdate();
+		$this->setUser();
+		$this->setChat();
+		$this->setDialog();
+	}
+
+	private function setUpdate(): void
 	{
 		if ($this->update && $this->last_update_id) {
 			return;
@@ -93,10 +101,55 @@ class Telegram extends BaseTelegram
 		$this->last_update_id = $update->getUpdateId();
 	}
 
+	protected function setUser(): void
+	{
+		$from = $this->update->getMessage()->getFrom();
+		$userId = $from->getId();
+		$userName = $from->getUsername();
+		$userFirstName = $from->getFirstName();
+		$userLastName  = $from->getLastName();
+
+		$this->user = User::query()->firstOrCreate([
+			'telegramId' => $userId,
+			'telegramName' => $userName,
+			'firstName' => $userFirstName,
+			'lastName' => $userLastName
+		]);
+	}
+
+	protected function setChat(): void
+	{
+		$chat = $this->update->getMessage()->getChat();
+		$chatId = $chat->getId();
+		$chatType = $chat->getType();
+		$chatName = $chat->getUsername() ? $chat->getUsername() : $chat->getTitle();
+
+		$this->chat = Chat::query()->firstOrCreate([
+			'telegramId' => $chatId,
+			'type' => $chatType,
+			'name' => $chatName,
+		]);
+	}
+
+	protected function setDialog(): void
+	{
+		$this->dialog = Dialog::query()
+			->where('userId', $this->user->id)
+			->where('chatId', $this->chat->id)
+			->first();
+	}
+
+	private function simpleCommandHandle(): bool
+	{
+		if ($response = $this->processUpdateCustom()) {
+			return $response->isOk();
+		}
+
+		return false;
+	}
+
 	public function processUpdateCustom(): ServerResponse
 	{
-		$this->setUpdateData();
-
 		if (is_callable($this->update_filter)) {
 			$reason = 'Update denied by update_filter';
 			try {
@@ -153,7 +206,36 @@ class Telegram extends BaseTelegram
 		}
 
 		DB::insertRequest($this->update);
-
 		return $this->executeCommand($command);
+	}
+
+	public function getCommandObject(string $command, string $filepath = ''): ?Command
+	{
+		if (isset($this->commands_objects[$command])) {
+			return $this->commands_objects[$command];
+		}
+
+		$which = [Command::AUTH_SYSTEM];
+		$this->isAdmin() && $which[] = Command::AUTH_ADMIN;
+		$which[] = Command::AUTH_USER;
+
+		foreach ($which as $auth) {
+			$command_class = $this->getCommandClassName($auth, $command, $filepath);
+
+			if ($command_class) {
+				$command_obj = new $command_class($this, $this->update);
+
+				// if ($auth === Command::AUTH_SYSTEM && $command_obj instanceof SystemCommand) {
+				// 	return $command_obj;
+				// }
+				// if ($auth === Command::AUTH_ADMIN && $command_obj instanceof AdminCommand) {
+				// 	return $command_obj;
+				// }
+				if ($auth === Command::AUTH_USER && $command_obj instanceof UserCommand) {
+					return $command_obj;
+				}
+			}
+		}
+		return null;
 	}
 }

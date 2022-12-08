@@ -5,7 +5,8 @@ namespace lib\Telegram\Commands;
 use App\Models\Dish;
 use App\Models\FoodSupplier;
 use Illuminate\Support\Facades\Log;
-use Longman\TelegramBot\Commands\UserCommand;
+use lib\Telegram\Dialogs\Dialog;
+use lib\Telegram\UserCommand;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Request;
 
@@ -43,30 +44,20 @@ class GetMenuCommand extends UserCommand
 		// создать диалог (про статус не забыть)
 		// создать действие
 		// сформировать сообщение для пользователя отправить
+		// Log::notice('here');
 
-
-		$chatId = $this->getUpdate()->getMessage()->getChat()->getId();
-
-		$foodSuppliers = FoodSupplier::all();
-		$foodSuppliers = FoodSupplier::query()->where('id', 1)->get();
-		$date = '2022-12-07';
-		$msg = '';
-
-		foreach ($foodSuppliers as $foodSupplier) {
-			$msg .= $foodSupplier->name . "\n";
-			$dishes = Dish::query()->where('date', $date)->where('foodSupplierId', $foodSupplier->id)->get();
-			// Log::debug($dishes);
-			// exit;
-
-			/** @var Dish $dish */
-			foreach ($dishes as $dish) {
-				$msg .= $dish->getRow() . "\n";
-			}
-		}
-		return Request::sendMessage([
-			'chat_id' => $chatId,
-			'text' => $msg
+		$newDialog = Dialog::query()->create([
+			'userId' => $this->getUser()->id,
+			'chatId' => $this->getChat()->id,
+			'type' => Dialog::DIALOG_TYPE_GET_MENU,
+			'status' => Dialog::DIALOG_STATUS_WAIT
 		]);
-		// return Request::emptyResponse();
+
+		/** @var Dialog $newDialog */
+		$newDialog->handle();
+
+
+
+		return Request::emptyResponse();
 	}
 }
