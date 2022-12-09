@@ -54,7 +54,7 @@ class GetMenuCommand extends UserCommand
 		]);
 
 		/** @var Dialog $newDialog */
-		$newDialog->handle();
+		$newDialog->handle($this->getUpdate());
 
 
 

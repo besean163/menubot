@@ -15,5 +15,6 @@ use Longman\TelegramBot\TelegramLog;
 Route::post('/', function (Request $request) {
     Log::error('WORK!');
     $telegram = new Telegram(env('BOT_TOKEN'), 'DevelopBot');
+    TelegramLog::initialize(null, Log::stack(['single']));
     $telegram->handle();
 });

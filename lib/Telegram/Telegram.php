@@ -51,7 +51,9 @@ class Telegram extends BaseTelegram
 
 	public function handle(): bool
 	{
-		$this->setSourceData();
+		if (!$this->setSourceData()) {
+			return false;
+		}
 
 		$channelPost = $this->update->getChannelPost();
 		if ($channelPost) {
@@ -59,18 +61,21 @@ class Telegram extends BaseTelegram
 		}
 
 		if ($this->dialog) {
-			return $this->dialog->handle();
+			return $this->dialog->handle($this->getUpdate());
 		} else {
 			return $this->simpleCommandHandle();
 		}
 	}
 
-	public function setSourceData(): void
+	public function setSourceData(): bool
 	{
 		$this->setUpdate();
-		$this->setUser();
+		if (!$this->setUser()) {
+			return false;
+		}
 		$this->setChat();
 		$this->setDialog();
+		return true;
 	}
 
 	private function setUpdate(): void
@@ -101,9 +106,15 @@ class Telegram extends BaseTelegram
 		$this->last_update_id = $update->getUpdateId();
 	}
 
-	protected function setUser(): void
+	protected function setUser(): bool
 	{
-		$from = $this->update->getMessage()->getFrom();
+		$message  = $this->update->getMessage() ? $this->update->getMessage() : $this->update->getCallbackQuery();
+
+		$from = $message->getFrom();
+		if ($from->getIsBot()) {
+			return false;
+		}
+
 		$userId = $from->getId();
 		$userName = $from->getUsername();
 		$userFirstName = $from->getFirstName();
@@ -115,11 +126,15 @@ class Telegram extends BaseTelegram
 			'firstName' => $userFirstName,
 			'lastName' => $userLastName
 		]);
+
+		return true;
 	}
 
 	protected function setChat(): void
 	{
-		$chat = $this->update->getMessage()->getChat();
+		$message  = $this->update->getMessage() ? $this->update->getMessage() : $this->update->getCallbackQuery()->getMessage();
+
+		$chat = $message->getChat();
 		$chatId = $chat->getId();
 		$chatType = $chat->getType();
 		$chatName = $chat->getUsername() ? $chat->getUsername() : $chat->getTitle();
@@ -136,6 +151,7 @@ class Telegram extends BaseTelegram
 		$this->dialog = Dialog::query()
 			->where('userId', $this->user->id)
 			->where('chatId', $this->chat->id)
+			->where('status', '!=', Dialog::DIALOG_STATUS_DONE)
 			->first();
 	}
 
