@@ -66,7 +66,6 @@ class DownloadSuppliersData extends Command
 			]);
 			// Log::info(get_class($foodSupplier));
 			if (!$foodSupplier) {
-				Log::alert('here');
 				$foodSupplier = FoodSupplier::create([
 					'name' => $name,
 					'sourceId' => $sourceId,

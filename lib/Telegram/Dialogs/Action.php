@@ -5,6 +5,7 @@ namespace lib\Telegram\Dialogs;
 use Exception;
 use Illuminate\Database\Console\Migrations\StatusCommand;
 use Longman\TelegramBot\Entities\Update;
+use Longman\TelegramBot\Request;
 
 abstract class Action
 {
@@ -65,9 +66,42 @@ abstract class Action
 		return new static($chatId, $type, $status, $result, $prev_message_id, $service_message_ids);
 	}
 
-	abstract public function firstLaunch(): void;
+	public function firstLaunch(): void
+	{
+		$this->sendMessage();
+	}
 
-	abstract public function handle(Update $update): void;
+	public function handle(Update $update): void
+	{
+		if ($this->isFinished()) {
+			return;
+		}
+
+		$callback = $update->getCallbackQuery();
+		$data = null;
+		if ($callback) {
+			$data = $callback->getData();
+		}
+
+		if (!in_array($data, array_keys($this->getValidValues())) || !$data) {
+			$this->cleanServiceMessages();
+			$this->deletePrevMessage();
+			$this->sendWarningMessage();
+			$this->sendMessage();
+		} else {
+			$this->deletePrevMessage();
+			$this->result = $data;
+			$this->prev_message_id = null;
+			$this->finish();
+			$this->cleanServiceMessages();
+			// $this->sendSuccessMessage();
+		}
+	}
+
+	public function getResult(): string
+	{
+		return $this->result;
+	}
 
 	public function isFinished(): bool
 	{
@@ -94,4 +128,38 @@ abstract class Action
 			'service_message_ids' => $this->service_message_ids,
 		];
 	}
+
+	protected function cleanServiceMessages(): void
+	{
+		foreach ($this->service_message_ids as $serviceMessageId) {
+			Request::deleteMessage([
+				'chat_id' => $this->chatId,
+				'message_id' => $serviceMessageId,
+			]);
+		}
+		$this->service_message_ids = [];
+	}
+
+	protected function sendWarningMessage(): void
+	{
+		$response = Request::sendMessage([
+			'chat_id' => $this->chatId,
+			'text' => "Пожалуйста выберите значение из предложенных.",
+		]);
+
+		/** @var Message $result */
+		$result = $response->getResult();
+		$this->service_message_ids[] = $result->getMessageId();
+	}
+
+	abstract protected function getValidValues(): array;
+
+	protected function deletePrevMessage(): void
+	{
+		Request::deleteMessage([
+			'chat_id' => $this->chatId,
+			'message_id' => $this->prev_message_id,
+		]);
+	}
+	abstract protected function sendMessage(): void;
 }

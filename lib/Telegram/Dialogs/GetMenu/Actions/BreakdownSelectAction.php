@@ -12,49 +12,43 @@ use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Entities\Update;
 use Longman\TelegramBot\Request;
 
-class DateSelectAction extends Action
+class BreakdownSelectAction extends Action
 {
 	public static function type(): string
 	{
-		return 'date_select';
+		return 'breakdown_select';
 	}
 
-	private function needThisWeek(): bool
+	public function firstLaunch(): void
 	{
-		$todayWeekDay = Date::today()->getWeekDay();
-		if ($todayWeekDay == 7) {
-			return false;
-		}
-		return true;
+		$this->sendMessage();
 	}
 
 	protected function getValidValues(): array
 	{
-		$dates = $this->needThisWeek() ? Date::getThisWeekWorkDays() : Date::getNextWeekWorkDays();
-		$result = [];
-		foreach ($dates as $date) {
-			$result[$date] = $date;
-		}
-		return $result;
+		return [
+			'supplier' => 'По ресторанам',
+			'category' => 'По категориям',
+		];
 	}
 
 	protected function sendMessage(): void
 	{
 		$values = $this->getValidValues();
 		$keyboard = [];
+		$line = [];
 		foreach ($values as $data => $text) {
-			$line = [];
 			$button = [
 				'text' => $text,
 				'callback_data' => $data
 			];
 			array_push($line, $button);
-			array_push($keyboard, $line);
 		}
+		array_push($keyboard, $line);
 
 		$response =  Request::sendMessage([
 			'chat_id' => $this->chatId,
-			'text' => 'Выберите дату:',
+			'text' => 'Как рабить данные?',
 			'reply_markup' => [
 				'inline_keyboard' => $keyboard
 			],

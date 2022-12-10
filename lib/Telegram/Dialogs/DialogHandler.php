@@ -18,6 +18,11 @@ abstract class DialogHandler
 		$this->update = $update;
 	}
 
+	protected function getChat(): Chat
+	{
+		return Chat::query()->firstWhere('id', $this->dialog->chatId);
+	}
+
 	public function run(): void
 	{
 		Log::debug("Dialog handled.");
@@ -33,14 +38,13 @@ abstract class DialogHandler
 		/** @var Action $actionClass */
 		foreach ($actionMap as $key => $actionClass) {
 			$actionData = $actionsData[$key] ?? null;
-			$chat = Chat::query()->firstWhere('id', $this->dialog->chatId);
 
 
 			if ($actionData === null) {
-				$action = $actionClass::makeNew($chat->telegramId);
+				$action = $actionClass::makeNew($this->getChat()->telegramId);
 				$action->firstLaunch();
 			} else {
-				$action = $actionClass::makeByConfig($chat->telegramId, $actionData);
+				$action = $actionClass::makeByConfig($this->getChat()->telegramId, $actionData);
 				$action->handle($this->update);
 			}
 			array_push($resultActions, $action->toArray());
@@ -52,7 +56,7 @@ abstract class DialogHandler
 			}
 		}
 
-		$this->dialog->actions = $resultActions;
+		$this->dialog->actions = json_encode($resultActions);
 		$this->dialog->save();
 
 		if ($dialogEnd) {
@@ -82,6 +86,7 @@ abstract class DialogHandler
 
 	public function getActionsData(): array
 	{
+		Log::debug($this->dialog->actions);
 		return json_decode($this->dialog->actions, true) ?? [];
 	}
 

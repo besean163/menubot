@@ -98,7 +98,7 @@ class ObedApi
 			$id = $idMatch[1];
 			$orderIdPattern = "/order_id=(.+)/";
 			preg_match($orderIdPattern, $paths[$i], $orderIdMatch);
-			$orderId = $orderIdMatch[1];
+			// $orderId = $orderIdMatch[1];
 
 			array_push($data, [
 				'name' => $names[$i],
