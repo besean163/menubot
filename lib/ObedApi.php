@@ -168,6 +168,8 @@ class ObedApi
 
 	public function syncDishes(FoodSupplier $foodSupplier, string $date): void
 	{
+		Log::info(sprintf("Date '%s'. Foodsupplier '%s'. Start download dishes...", $date, $foodSupplier->name));
+
 		$params = [
 			RequestOptions::QUERY => [
 				'date' => $date
@@ -176,44 +178,53 @@ class ObedApi
 		];
 
 		$categoriesPattern = '/<p class="ob-supplier-complex__complex-title js-categories-title" id="(category_\d+)">(.+?)</';
-		$idCaloriesNamePattern = '/dish_name_(\d+).+?data-calorie="(\d+)">(.+?)</';
+		$idNamePattern = '/dish_name_(\d+).+?>(.+?)</';
+		$caloriePattern = '/data-calorie="(\d+)"/';
+		// не работает в сладкоежке
+		// $idCaloriesNamePattern = '/dish_name_(\d+).+?data-calorie="(\d+)">(.+?)</';
 		$weightDataPattern = '/<span class="ob-supplier-complex-tile__grams">\((.+?)\)/';
 		$costPattern = '/<input type="hidden" class="price_.+?value="(.+?)"/';
-		$ingredientPattern = '/id="dish_description_\d+">(.+?)</';
+		$ingredientPattern = '/div class="ob-supplier-complex-tile__order-compos ob-supplier-complex-tile__order-compos_mobile.+?>(.+?)</';
+
+
 
 		$url = self::BASE_URL . 'suppliers/' . $foodSupplier->sourceId . '/menu';
 		$response = $this->client->get($url, $params);
 		$page = $response->getBody()->getContents();
 
+		// if ($date == '2022-12-12') {
+		// 	Log::debug('save');
+		// 	file_put_contents('/home/besean/page' . $foodSupplier->id . '.txt', $page);
+		// }
+
 		$categoriesParts = explode('<!-- Название категории -->', $page);
+		// отбрасываем первую часть, она нам не интересна
+		unset($categoriesParts[0]);
+		$categoriesCount = count($categoriesParts);
+		Log::info(sprintf("Found %d categories.", $categoriesCount));
 		foreach ($categoriesParts as $categoriesPart) {
-			if (strpos($categoriesPart, '<!-- Наименование блюда -->') === false) {
-				continue;
-			}
-			// Log::notice('here');
+			$dishCount = 0;
 
 			preg_match($categoriesPattern, $categoriesPart, $categoryMatches);
 
-			// Log::notice($categoryMatches);
-			// exit;
+			$categoryId = trim($categoryMatches[1]);
+			$categoryName = trim($categoryMatches[2]);
 
-			$categoryId = $categoryMatches[1];
-			$categoryName = $categoryMatches[2];
-
-			Log::info($categoryId);
+			// Log::info($categoryId);
 			$category = FoodCategory::query()->firstOrCreate([
 				'name' => $categoryName,
 				'sourceId' => $categoryId,
 			]);
 
-			preg_match_all($idCaloriesNamePattern, $categoriesPart, $idCaloriesNameMatches);
+			preg_match_all($idNamePattern, $categoriesPart, $idNameMatches);
+			preg_match_all($caloriePattern, $categoriesPart, $calorieMatches);
 			preg_match_all($weightDataPattern, $categoriesPart, $weightDataMatches);
 			preg_match_all($costPattern, $categoriesPart, $costMatches);
 			preg_match_all($ingredientPattern, $categoriesPart, $ingredientMatches);
 
-			$dishIds = $idCaloriesNameMatches[1];
-			$dishesCalories = $idCaloriesNameMatches[2];
-			$dishNames = $idCaloriesNameMatches[3];
+			$dishIds = $idNameMatches[1];
+			$dishNames = $idNameMatches[2];
+			$dishesCalories = $calorieMatches[1];
 			$weightSets = $weightDataMatches[1];
 			$costs = $costMatches[1];
 			$ingredientSets = $ingredientMatches[1];
@@ -223,15 +234,18 @@ class ObedApi
 				$price = (float) (trim($costs[$i]));
 				$calories = (float) (trim($dishesCalories[$i]));
 
-				Log::alert($weightSets[$i]);
 				$weightData = explode(' ', $weightSets[$i]);
 				$weight = (float) (trim($weightData[0]));
 				$weightDimension = trim($weightData[1] ?? '');
 				$ingredients = array_map('trim', explode(',', trim($ingredientSets[$i] ?? '')));
 
 				Dish::make($foodSupplier->id, $date, $category->id, $sourceId, $name, $weight, $weightDimension, $price, $calories, $ingredients);
+				$dishCount += 1;
 			}
+			Log::info(sprintf("'%s' categoty. %d dishes downloaded.", $category->name, $dishCount));
 		}
+
+		Log::info(sprintf("%s - end download dishes.", $foodSupplier->name));
 	}
 
 	private static function mb_str_pad($input, $pad_length, $pad_string = ' ', $pad_type = STR_PAD_RIGHT)

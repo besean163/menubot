@@ -65,7 +65,7 @@ class FoodSupplier extends Model
 				if ($categoryDishes->count() !== 0 && $category->sourceId !== 'category_800') {
 					$menu .= sprintf("  Категория \"%s\":\n", $category->name);
 					foreach ($categoryDishes as $categoryDish) {
-						$menu .= sprintf("   -%s\"\n", $categoryDish->name);
+						$menu .= sprintf("   -%s\n", $categoryDish->name);
 					}
 					$menu .= "\n";
 				}

@@ -54,7 +54,6 @@ class Dish extends Model
 			->where('sourceId', $sourceId)
 			->first();
 
-		Log::notice('here');
 		if (!$dish) {
 			$dish = self::query()->create([
 				'foodSupplierId' => $foodSupplierId,

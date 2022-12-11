@@ -6,11 +6,11 @@ use App\Models\Chat;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use lib\Telegram\Commands\SystemCommands\GenericmessageCommand;
 use lib\Telegram\Commands\GetMenuCommand;
 use lib\Telegram\Commands\StartCommand;
+use lib\Telegram\Commands\SystemCommand;
 use lib\Telegram\Dialogs\Dialog;
-use Longman\TelegramBot\Commands\AdminCommand;
-use Longman\TelegramBot\Commands\SystemCommand;
 use Longman\TelegramBot\DB;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Entities\Update;
@@ -31,7 +31,9 @@ class Telegram extends BaseTelegram
 			'get_menu' => GetMenuCommand::class
 		],
 		Command::AUTH_ADMIN  => [],
-		Command::AUTH_SYSTEM => [],
+		Command::AUTH_SYSTEM => [
+			self::GENERIC_MESSAGE_COMMAND => GenericmessageCommand::class
+		],
 	];
 
 	public function getUpdate(): Update
@@ -232,7 +234,7 @@ class Telegram extends BaseTelegram
 		}
 
 		$which = [Command::AUTH_SYSTEM];
-		$this->isAdmin() && $which[] = Command::AUTH_ADMIN;
+		// $this->isAdmin() && $which[] = Command::AUTH_ADMIN;
 		$which[] = Command::AUTH_USER;
 
 		foreach ($which as $auth) {
@@ -241,9 +243,9 @@ class Telegram extends BaseTelegram
 			if ($command_class) {
 				$command_obj = new $command_class($this, $this->update);
 
-				// if ($auth === Command::AUTH_SYSTEM && $command_obj instanceof SystemCommand) {
-				// 	return $command_obj;
-				// }
+				if ($auth === Command::AUTH_SYSTEM && $command_obj instanceof SystemCommand) {
+					return $command_obj;
+				}
 				// if ($auth === Command::AUTH_ADMIN && $command_obj instanceof AdminCommand) {
 				// 	return $command_obj;
 				// }

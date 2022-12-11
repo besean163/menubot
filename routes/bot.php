@@ -13,10 +13,15 @@ use Longman\TelegramBot\TelegramLog;
 
 
 Route::post('/', function (Request $request) {
-    Log::error('WORK!');
-    // Log::error('Работает!');
-    // Log::alert($request::post());
-    $telegram = new Telegram(env('BOT_TOKEN'), 'DevelopBot');
-    TelegramLog::initialize(null, Log::stack(['single']));
-    $telegram->handle();
+	/*
+		Кто может пользоваться:
+		 - не бот
+		 - запрос из приватного чата
+	 */
+	Log::error('WORK!');
+	// Log::error('Работает!');
+	// Log::alert($request::post());
+	$telegram = new Telegram(env('BOT_TOKEN'), 'DevelopBot');
+	TelegramLog::initialize(null, Log::stack(['single']));
+	$telegram->handle();
 });
