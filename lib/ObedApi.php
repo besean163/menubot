@@ -242,7 +242,7 @@ class ObedApi
 				Dish::make($foodSupplier->id, $date, $category->id, $sourceId, $name, $weight, $weightDimension, $price, $calories, $ingredients);
 				$dishCount += 1;
 			}
-			Log::info(sprintf("'%s' categoty. %d dishes downloaded.", $category->name, $dishCount));
+			Log::info(sprintf("'%s' category. %d dishes downloaded.", $category->name, $dishCount));
 		}
 
 		Log::info(sprintf("%s - end download dishes.", $foodSupplier->name));

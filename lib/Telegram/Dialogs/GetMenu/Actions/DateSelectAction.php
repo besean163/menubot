@@ -33,7 +33,8 @@ class DateSelectAction extends Action
 		$dates = $this->needThisWeek() ? Date::getThisWeekWorkDays() : Date::getNextWeekWorkDays();
 		$result = [];
 		foreach ($dates as $date) {
-			$result[$date] = $date;
+			$cyrWeekDay = (new Date($date))->getCyrillicWeekDay();
+			$result[$date] = sprintf("%s (%s)", $cyrWeekDay, $date);
 		}
 		return $result;
 	}
