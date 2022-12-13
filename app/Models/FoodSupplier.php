@@ -131,18 +131,81 @@ class FoodSupplier extends Model
 		return str_pad($input, $pad_length + $diff, $pad_string, $pad_type);
 	}
 
-	public static function getStringWithShift(string $text, int $maxSymbolsInRow = 10, $shift = true): string
+	public static function getStringWithShift(string $text, int $maxSymbolsInRow = 10, $needCut = false): string
 	{
-		// $text = 'ывафыапвап text';
-		$result = '';
-		if ($maxSymbolsInRow < 3) {
-			throw new Exception("Max symbols count should be more then 2.");
+		/*
+			Это функция переноса:
+			- длина строки ограничивается переданным числом
+			- часть строки больше числа либо обрезается либо рекурсивно передается этой же функции, это решается относительно 3го параметра
+
+			Последовательность:
+			1. Проверяем строку по длине, если меньше указаного числа, значит возвращаем эту же строку
+			2. Если нет, пытаемся разбить на слова по пробелам
+			3. Проверяем первое слово. 
+				а. Если оно длинее лимита: 
+					- Обрезаем его или делим для переноса
+				б. Если короче:
+					- Сохраняем в результирующщую строку
+					- Идем дальше по массиву слов
+					- Проверяем если сумма результирующей строки и нового слова
+						1. если меньше лимита
+							- идем дальше по массиву
+						2. если больше 
+							- сохраняем результирующую строку без нового слова в массиве результата
+							- остальные слова строки сохраняем в массив остатков
+							- объединяем массив остатков в новую строку и передаем в функцию рекурсивно
+			4. Соединяем массив результата переносом строки в строку
+			5. возвращаем строку
+		*/
+
+		$cutSymbol = '...';
+		$cutSymbolLength = mb_strlen($cutSymbol);
+
+		if ($maxSymbolsInRow < $cutSymbolLength && $needCut) {
+			throw new Exception(sprintf("Max symbols count should be more then %d.", $cutSymbolLength));
 		}
 
 		// если меньше или равен оставляем все как есть без изменений
-		if (mb_strlen($text) <= $maxSymbolsInRow) {
-			$result = $text;
+		if (mb_strlen($text) <= $maxSymbolsInRow || trim($text) === '') {
+			return $text;
 		}
+
+		$resultRows = [];
+		$words = preg_split('/(\s+)/', trim($text));
+
+		$filled = false;
+		$row = '';
+		$remainWords = [];
+		foreach ($words as $word) {
+			if ($filled) {
+				$remainWords[] = $word;
+				continue;
+			}
+
+			if (mb_strlen($word) > $maxSymbolsInRow) {
+				$chars = mb_str_split($word);
+				$row = implode('', array_slice($chars, 0, $maxSymbolsInRow));
+				$remnant = implode('', array_slice($chars, $maxSymbolsInRow + 1));
+				$remainWords[] = $remnant;
+				$filled = true;
+				continue;
+			}
+
+			$checkRow = $row . '_' . $word;
+			if (mb_strlen($checkRow) <= $maxSymbolsInRow) {
+				$row = $checkRow;
+				continue;
+			}
+		}
+
+		for ($i = 1; $i < count($words); $i++) {
+			$sum = $row . '_' . $words[$i];
+			if (mb_strlen($sum) <= $maxSymbolsInRow) {
+				$row = $sum;
+			}
+		}
+
+
 
 		$sumText = '';
 		$otherWords = [];
@@ -188,5 +251,31 @@ class FoodSupplier extends Model
 
 
 		return $result . "\n";
+	}
+
+	public function newFunc($text, $limit): string
+	{
+		// если меньше или равен оставляем все как есть без изменений
+		if (mb_strlen($text) <= $limit || trim($text) === '') {
+			return $text;
+		}
+
+		$words = preg_split('/(\s+)/', trim($text));
+		$word = $words[0];
+
+		if (mb_strlen($word) > $limit) {
+			$chars = mb_str_split($word);
+			$row = implode('', array_slice($chars, 0, $limit));
+			$remnant = implode('', array_slice($chars, $limit + 1));
+			$remainWords[] = $remnant;
+			$filled = true;
+			continue;
+		}
+
+
+
+
+
+		return '';
 	}
 }
