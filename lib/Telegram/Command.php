@@ -4,6 +4,7 @@ namespace lib\Telegram;
 
 use App\Models\Chat;
 use App\Models\User;
+use Exception;
 use lib\Telegram\Telegram;
 use Longman\TelegramBot\Commands\Command as CommandsCommand;
 use Longman\TelegramBot\Entities\Update;
@@ -24,11 +25,19 @@ abstract class Command extends CommandsCommand
 
 	public function getUser(): User
 	{
-		return $this->telegram->getUser();
+		$user = $this->telegram->getUser();
+		if (!$user) {
+			throw new Exception("User wasn't set.");
+		}
+		return $user;
 	}
 
 	public function getChat(): Chat
 	{
-		return $this->telegram->getChat();
+		$chat = $this->telegram->getChat();
+		if (!$chat) {
+			throw new Exception("Chat wasn't set.");
+		}
+		return $chat;
 	}
 }

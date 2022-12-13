@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\FoodSupplier;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ class testCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'command:testCommand';
+    protected $signature = 'testCommand';
 
     /**
      * The console command description.
@@ -31,40 +32,10 @@ class testCommand extends Command
      */
     public function handle()
     {
-        User::where(
-            [
-                ['id', '>', 1],
-                ['id', '<', 5],
-            ]
-        )->get()->each(function (User $user) {
-            echo $user->name . "\n";
-        });
-
-        $user = User::find(2);
-
-
-        $this->showStatus($user, 'name');
-        $user->name = 'other_name_1';
-        $this->showStatus($user, 'name');
-        $user->save();
-        $this->showStatus($user, 'name');
-        print_r($user->getOriginal());
-
-        // echo $user->name;
+        // $msg = FoodSupplier::getByCategories('2022-12-12');
+        $text = 'ывафыапвап text вапвыаыврвп sdgdf hfg hfhdfgh';
+        $msg = FoodSupplier::getStringWithShift($text, 5);
+        echo $msg;
         return Command::SUCCESS;
-    }
-
-    private function showStatus(User $user, string $prop)
-    {
-        $status = 'no status';
-        if ($user->isDirty($prop)) {
-            $status = 'dirty';
-        } elseif ($user->isClean($prop)) {
-            $status =  'clean';
-        }
-        if ($user->wasChanged($prop)) {
-            $status .= ' and was changed';
-        }
-        echo $status . "\n";
     }
 }

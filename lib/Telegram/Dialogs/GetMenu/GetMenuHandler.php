@@ -39,7 +39,8 @@ class GetMenuHandler extends DialogHandler
 		$menu = FoodSupplier::getMenu($date, $breakdown);
 		Request::sendMessage([
 			'chat_id' => $chat->telegramId,
-			'text' => $menu
+			'text' => $menu,
+			'parse_mode' => 'html',
 		]);
 	}
 }

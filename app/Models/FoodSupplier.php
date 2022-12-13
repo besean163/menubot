@@ -92,6 +92,7 @@ class FoodSupplier extends Model
 			if ($category->sourceId === 'category_800') {
 				continue;
 			}
+			$dishNumber = 1;
 
 			$menu .= sprintf("Категория \"%s\":\n", $category->name);
 			$needDishes = null;
@@ -103,11 +104,89 @@ class FoodSupplier extends Model
 					return false;
 				});
 				foreach ($needDishes as $needDish) {
-					$menu .= sprintf("  %s (%s)\n", $needDish->name, $foodSupplier->name);
+					// $menu .= sprintf("  %s (%s)\n", $needDish->name, $foodSupplier->name);
+
+					$numberPart = sprintf("%d. ", $dishNumber);
+					$namePart = self::mb_str_pad($needDish->name, 25, ' ', STR_PAD_RIGHT);
+					// $namePart = self::mb_str_pad(fake('us')->name(), 30, '.', STR_PAD_RIGHT);
+					$pricePart = str_pad(sprintf("%.2f р.", $needDish->price), 10, ' ', STR_PAD_LEFT);
+					$menu .= sprintf(
+						"%s%s%s\n",
+						$numberPart,
+						$namePart,
+						$pricePart
+					);
+					// $menu .= sprintf("%d. \n", $needDish->name, $foodSupplier->name);
+					$dishNumber++;
 				}
 			}
 			$menu .= "\n";
 		}
-		return $menu;
+		return '<code>' . $menu . '</code>';
+	}
+
+	private static function mb_str_pad($input, $pad_length, $pad_string = ' ', $pad_type = STR_PAD_RIGHT)
+	{
+		$diff = strlen($input) - mb_strlen($input);
+		return str_pad($input, $pad_length + $diff, $pad_string, $pad_type);
+	}
+
+	public static function getStringWithShift(string $text, int $maxSymbolsInRow = 10, $shift = true): string
+	{
+		// $text = 'ывафыапвап text';
+		$result = '';
+		if ($maxSymbolsInRow < 3) {
+			throw new Exception("Max symbols count should be more then 2.");
+		}
+
+		// если меньше или равен оставляем все как есть без изменений
+		if (mb_strlen($text) <= $maxSymbolsInRow) {
+			$result = $text;
+		}
+
+		$sumText = '';
+		$otherWords = [];
+		$fill = false;
+		// пробуем разбить по пробелам
+		if ($result === '') {
+			$words = preg_split('/(\s+)/', trim($text));
+			foreach ($words as $key => $word) {
+				if ($key === 0) {
+					$sumText = $word;
+					continue;
+				}
+
+				if ($sumText === '') {
+					if (mb_strlen(sprintf("%s %s", $sumText, $word)) <= $maxSymbolsInRow && !$fill) {
+						$sumText = sprintf("%s %s", $sumText, $word);
+						continue;
+					} else {
+						$fill = true;
+						array_push($otherWords, $word);
+					}
+				}
+			}
+		}
+		$result = $sumText;
+		echo $sumText . "\n";
+		print_r($otherWords);
+
+		if ($result === '' && $sumText !== '' && !empty($otherWords)) {
+			$result = $sumText . "\n";
+			// echo implode(' ', $otherWords) . "\n";
+			$result .= self::getStringWithShift(implode(' ', $otherWords), $maxSymbolsInRow, $shift);
+		}
+
+		if ($result === '') {
+			$chars = mb_str_split($result);
+			$newWord = '';
+			for ($i = 0; $i < $maxSymbolsInRow - 3; $i++) {
+				$newWord .= $chars[$i];
+			}
+			$result = $newWord . '...';
+		}
+
+
+		return $result . "\n";
 	}
 }

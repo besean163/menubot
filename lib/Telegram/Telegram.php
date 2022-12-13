@@ -21,8 +21,8 @@ use Longman\TelegramBot\TelegramLog;
 
 class Telegram extends BaseTelegram
 {
-	public User $user;
-	public Chat $chat;
+	public ?User $user = null;
+	public ?Chat $chat = null;
 	public ?Dialog $dialog = null;
 
 	protected $command_classes = [
@@ -41,43 +41,34 @@ class Telegram extends BaseTelegram
 		return $this->update;
 	}
 
-	public function getUser(): User
-	{
-		return $this->user;
-	}
-
-	public function getChat(): Chat
-	{
-		return $this->chat;
-	}
-
-	public function handle(): bool
-	{
-		if (!$this->setSourceData()) {
-			return false;
-		}
-
-		$channelPost = $this->update->getChannelPost();
-		if ($channelPost) {
-			return false;
-		}
-
-		if ($this->dialog) {
-			return $this->dialog->handle($this->getUpdate());
-		} else {
-			return $this->simpleCommandHandle();
-		}
-	}
-
-	public function setSourceData(): bool
+	public function process(): void
 	{
 		$this->setUpdate();
-		if (!$this->setUser()) {
-			return false;
+		if (!$this->isAvalibleUpdateType()) {
+			return;
 		}
-		$this->setChat();
-		$this->setDialog();
-		return true;
+
+		// устанавливаем пользователя
+		$user = $this->getUser();
+		if (!$user) {
+			return;
+		}
+		$this->setUser($user);
+
+		// устанавливаем чат
+		$chat = $this->getChat();
+		if (!$chat) {
+			return;
+		}
+		$this->setChat($chat);
+
+		// Проверяем наличие диалога, если есть то обрабатываем его
+		$dialog = $this->getDialog();
+		if ($dialog) {
+			$dialog->handle($this->update);
+		} else {
+			$this->simpleCommandHandle();
+		}
 	}
 
 	private function setUpdate(): void
@@ -85,7 +76,14 @@ class Telegram extends BaseTelegram
 		if ($this->update && $this->last_update_id) {
 			return;
 		}
+		$update = $this->getInputUpdate();
 
+		$this->update         = $update;
+		$this->last_update_id = $update->getUpdateId();
+	}
+
+	public function getInputUpdate(): Update
+	{
 		if ($this->bot_username === '') {
 			throw new TelegramException('Bot Username is not defined!');
 		}
@@ -103,18 +101,22 @@ class Telegram extends BaseTelegram
 			throw new TelegramException('Invalid input JSON! The webhook must not be called manually, only by Telegram.');
 		}
 
-		$update = new Update($post, $this->bot_username);
-		$this->update         = $update;
-		$this->last_update_id = $update->getUpdateId();
+		return new Update($post, $this->bot_username);
 	}
 
-	protected function setUser(): bool
+
+	public function getUser(): ?User
 	{
+		if ($this->user) {
+			return $this->user;
+		}
+
 		$message  = $this->update->getMessage() ? $this->update->getMessage() : $this->update->getCallbackQuery();
 
 		$from = $message->getFrom();
+		// с ботами не работаем, не создаем юзера
 		if ($from->getIsBot()) {
-			return false;
+			return null;
 		}
 
 		$userId = $from->getId();
@@ -122,35 +124,56 @@ class Telegram extends BaseTelegram
 		$userFirstName = $from->getFirstName();
 		$userLastName  = $from->getLastName();
 
-		$this->user = User::query()->firstOrCreate([
+		return User::query()->firstOrCreate([
 			'telegramId' => $userId,
 			'telegramName' => $userName,
 			'firstName' => $userFirstName,
 			'lastName' => $userLastName
 		]);
-
-		return true;
 	}
 
-	protected function setChat(): void
+	protected function setUser(User $user): void
 	{
+		$this->user = $user;
+	}
+
+	public function getChat(): ?Chat
+	{
+		if ($this->chat) {
+			return $this->chat;
+		}
+
 		$message  = $this->update->getMessage() ? $this->update->getMessage() : $this->update->getCallbackQuery()->getMessage();
+		if (!$message) {
+			return null;
+		}
 
-		$chat = $message->getChat();
-		$chatId = $chat->getId();
-		$chatType = $chat->getType();
-		$chatName = $chat->getUsername() ? $chat->getUsername() : $chat->getTitle();
+		$telChat = $message->getChat();
 
-		$this->chat = Chat::query()->firstOrCreate([
+		// работаем только в приватных чатах
+		if (!$telChat->isPrivateChat()) {
+			return null;
+		}
+
+		$chatId = $telChat->getId();
+		$chatType = $telChat->getType();
+		$chatName = $telChat->getUsername() ? $telChat->getUsername() : $telChat->getTitle();
+
+		return Chat::query()->firstOrCreate([
 			'telegramId' => $chatId,
 			'type' => $chatType,
 			'name' => $chatName,
 		]);
 	}
 
-	protected function setDialog(): void
+	protected function setChat(Chat $chat): void
 	{
-		$this->dialog = Dialog::query()
+		$this->chat = $chat;
+	}
+
+	protected function getDialog(): ?Dialog
+	{
+		return Dialog::query()
 			->where('userId', $this->user->id)
 			->where('chatId', $this->chat->id)
 			->where('status', '!=', Dialog::DIALOG_STATUS_DONE)
@@ -255,5 +278,19 @@ class Telegram extends BaseTelegram
 			}
 		}
 		return null;
+	}
+
+	private function isAvalibleUpdateType(): bool
+	{
+		$avalibleTypes = [
+			Update::TYPE_MESSAGE,
+			Update::TYPE_CALLBACK_QUERY
+		];
+
+		$updateType = $this->update->getUpdateType();
+		if ($updateType && in_array($updateType, $avalibleTypes)) {
+			return true;
+		}
+		return false;
 	}
 }
