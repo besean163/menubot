@@ -18,7 +18,7 @@ abstract class DialogHandler
 		$this->update = $update;
 	}
 
-	protected function getChat(): Chat
+	public function getChat(): Chat
 	{
 		return Chat::query()->firstWhere('id', $this->dialog->chatId);
 	}
@@ -41,14 +41,16 @@ abstract class DialogHandler
 
 
 			if ($actionData === null) {
-				$action = $actionClass::makeNew($this->getChat()->telegramId);
+				$action = $actionClass::makeNew($this, $key);
 				$action->firstLaunch();
 			} else {
-				$action = $actionClass::makeByConfig($this->getChat()->telegramId, $actionData);
+				$action = $actionClass::makeByConfig($this, $actionData);
 				$action->handle($this->update);
 			}
 			array_push($resultActions, $action->toArray());
 
+			$this->dialog->actions = json_encode($resultActions);
+			$this->dialog->save();
 
 			if (!$action->isFinished()) {
 				$dialogEnd = false;
@@ -56,8 +58,6 @@ abstract class DialogHandler
 			}
 		}
 
-		$this->dialog->actions = json_encode($resultActions);
-		$this->dialog->save();
 
 		if ($dialogEnd) {
 			$this->sendResult();

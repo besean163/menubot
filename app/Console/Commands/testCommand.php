@@ -33,7 +33,7 @@ class testCommand extends Command
      */
     public function handle()
     {
-        $msg = FoodSupplier::getByCategories('2022-12-12');
+        $msg = FoodSupplier::getBySupplier('2022-12-12', 1);
         // $text = 'рождество text  приходит hfg hfhdfgh';
         // $msg = Str::explodeStringByLimit($text, 20);
         echo "\n" . $msg;

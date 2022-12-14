@@ -9,6 +9,9 @@ use Longman\TelegramBot\Request;
 
 abstract class Action
 {
+
+	public DialogHandler $parentHandler;
+	public int $id;
 	public string $type;
 	public string $status;
 	public ?string $result = null;
@@ -19,9 +22,11 @@ abstract class Action
 	const STATUS_WAIT = 'wait';
 	const STATUS_FINISH = 'finish';
 
-	public function __construct(string $chatId, string $type, string $status, ?string $result = null, ?string $prev_message_id = null, array $service_message_ids = [])
+	public function __construct(DialogHandler $handler, int $id, string $type, string $status, ?string $result = null, ?string $prev_message_id = null, array $service_message_ids = [])
 	{
-		$this->chatId = $chatId;
+		$this->parentHandler = $handler;
+		$this->id = $id;
+		$this->chatId = $handler->getChat()->telegramId;
 		$this->type = $type;
 		$this->setStatus($status);
 		$this->result = $result;
@@ -42,13 +47,14 @@ abstract class Action
 
 	abstract public static function type(): string;
 
-	public static function makeNew(string $chatId): static
+	public static function makeNew(DialogHandler $handler, int $id): static
 	{
-		return new static($chatId, static::type(), self::STATUS_WAIT);
+		return new static($handler, $id, static::type(), self::STATUS_WAIT);
 	}
 
-	public static function makeByConfig(string $chatId, array $config): static
+	public static function makeByConfig(DialogHandler $handler, array $config): static
 	{
+		$id = $config['id'] ?? null;
 		$type = $config['type'] ?? null;
 		$status = $config['status'] ?? null;
 		$result = $config['result'] ?? null;
@@ -63,7 +69,7 @@ abstract class Action
 			throw new Exception(sprintf("Type not match. (expect: %s, actual:%s).", static::type(), $type));
 		}
 
-		return new static($chatId, $type, $status, $result, $prev_message_id, $service_message_ids);
+		return new static($handler, $id, $type, $status, $result, $prev_message_id, $service_message_ids);
 	}
 
 	public function firstLaunch(): void
@@ -121,6 +127,7 @@ abstract class Action
 	public function toArray(): array
 	{
 		return [
+			'id' => $this->id,
 			'type' => $this->type,
 			'status' => $this->status,
 			'result' => $this->result,
@@ -162,4 +169,61 @@ abstract class Action
 		]);
 	}
 	abstract protected function sendMessage(): void;
+
+	protected function getPrevAction(): Action
+	{
+		if ($this->isFirstAction()) {
+			throw new Exception("Can't get previous action. It action is first.");
+		}
+		$prevActionId = $this->id - 1;
+		$actionClasses = $this->parentHandler->getActionMap();
+
+		/** @var static $prevActionClass */
+		$prevActionClass = $actionClasses[$prevActionId] ?? null;
+		if (!$prevActionClass) {
+			throw new Exception("Action class doesn't exist.");
+		}
+
+		$actionsData = $this->parentHandler->getActionsData();
+
+		$prevActionData = $actionsData[$prevActionId] ?? null;
+		if (!$prevActionData) {
+			throw new Exception("Action doesn't exist yet.");
+		}
+
+		return $prevActionClass::makeByConfig($this->parentHandler, $prevActionData);
+	}
+
+	protected function getPrevActionResults(): array
+	{
+		if ($this->isFirstAction()) {
+			throw new Exception("Can't get previous action. It action is first.");
+		}
+		$results = [];
+		// $prevActionId = $this->id - 1;
+		$actionClasses = $this->parentHandler->getActionMap();
+		$actionsData = $this->parentHandler->getActionsData();
+
+		for ($prevActionId = 0; $prevActionId < $this->id; $prevActionId++) {
+			$prevActionData = $actionsData[$prevActionId] ?? null;
+			if (!$prevActionData) {
+				throw new Exception("Action doesn't exist yet.");
+			}
+
+			/** @var static $prevActionClass */
+			$prevActionClass = $actionClasses[$prevActionId] ?? null;
+			if (!$prevActionClass) {
+				throw new Exception("Action class doesn't exist.");
+			}
+			$prevAction = $prevActionClass::makeByConfig($this->parentHandler, $prevActionData);
+			$results[] = $prevAction->getResult();
+		}
+
+		return $results;
+	}
+
+	public function isFirstAction(): bool
+	{
+		return $this->id === 0;
+	}
 }

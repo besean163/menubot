@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use lib\Utils\Str;
 
@@ -71,7 +72,7 @@ class Dish extends Model
 		}
 	}
 
-	public function getRow(int $rowNumber): string
+	public function getRow(int $rowNumber, bool $needMark = false): string
 	{
 		// в общем 40 должно быть
 		// лимит сиволов на строку номера
@@ -89,16 +90,21 @@ class Dish extends Model
 		// лимит сиволов на строку валюты цены
 		$valuteLimit = 2;
 
+		$supplierMarkLimit = 5;
+
 		$result =  '';
+		$numberText = $rowNumber . '.';
 		$weightText = $this->weight . $this->weightDimension;
 		$priceText = sprintf('%.2f', $this->price);
+		$supplierMarkText = sprintf('(%s)', $this->getFoodSupplier()->getShortName());
 
-		$numberRow = str_pad($rowNumber . '.', $numberLimit, ' ', STR_PAD_LEFT);
+		$numberRow = str_pad($numberText, $numberLimit, ' ', STR_PAD_LEFT);
 		$weightRow = Str::mb_str_pad($weightText, $weightLimit, ' ', STR_PAD_LEFT);
 		$dataPriceSeparatorRow = str_pad('-', $dataPriceSeparatorLimit, ' ', STR_PAD_BOTH);
 		$priceRow = str_pad($priceText, $priceLimit, ' ', STR_PAD_LEFT);
 		$priceValuteSeparatorRow = str_pad('', $priceValuteSeparatorLimit);
 		$valuteRow = str_pad('р.', $valuteLimit);
+		$supplierMarkRow = str_pad($supplierMarkText, $supplierMarkLimit);
 
 		$nameRows = Str::explodeStringByLimit($this->name, $nameLimit);
 		if (!empty($nameRows)) {
@@ -110,6 +116,7 @@ class Dish extends Model
 				$pricePart = str_pad('', strlen($priceRow));
 				$priceValuteSeparatorPart = str_pad('', strlen($priceValuteSeparatorRow));
 				$valutePart = str_pad('', strlen($valuteRow));
+				$supplierMarkPart = str_pad('', strlen($supplierMarkRow));
 
 				$row = '';
 				if ($key === 0) {
@@ -122,18 +129,33 @@ class Dish extends Model
 					$pricePart = $priceRow;
 					$priceValuteSeparatorPart = $priceValuteSeparatorRow;
 					$valutePart = $valuteRow;
+					$supplierMarkPart = $supplierMarkRow;
 				}
 
-				$row = sprintf(
-					"%s%s%s%s%s%s%s\n",
-					$numberPart,
-					$namePart,
-					$weightPart,
-					$dataPriceSeparatorPart,
-					$pricePart,
-					$priceValuteSeparatorPart,
-					$valutePart
-				);
+				// $row = sprintf(
+				// 	"%s%s%s%s%s%s%s\n",
+				// 	$numberPart,
+				// 	$namePart,
+				// 	$weightPart,
+				// 	$dataPriceSeparatorPart,
+				// 	$pricePart,
+				// 	$priceValuteSeparatorPart,
+				// 	$valutePart
+				// );
+
+				$row .= $numberPart;
+				$row .= $namePart;
+				$row .= $weightPart;
+				$row .= $dataPriceSeparatorPart;
+				$row .= $pricePart;
+				$row .= $priceValuteSeparatorPart;
+				$row .= $valutePart;
+				if ($needMark) {
+					$row .= $supplierMarkPart;
+				}
+				$row .= "\n";
+
+
 				$result .= $row;
 			}
 		}
@@ -154,4 +176,31 @@ class Dish extends Model
 	// 		self::INGREDIENTS => $this->ingredients
 	// 	];
 	// }
+
+	public static function getFoodSuppliers(string $date): Collection
+	{
+		$dishes = self::query()->where('date', $date)->get();
+
+		$fooSupplierIds = $dishes->groupBy(function (self $d) {
+			return $d->foodSupplierId;
+		})->keys()->toArray();
+
+		return FoodSupplier::query()->getQuery()->whereIn('id', $fooSupplierIds)->get();
+	}
+
+	public static function getCategories(string $date): Collection
+	{
+		$dishes = self::query()->where('date', $date)->get();
+
+		$categoryIds = $dishes->groupBy(function (self $d) {
+			return $d->categoryId;
+		})->keys()->toArray();
+
+		return FoodCategory::query()->getQuery()->whereIn('id', $categoryIds)->get();
+	}
+
+	public function getFoodSupplier(): FoodSupplier
+	{
+		return FoodSupplier::query()->where('id', $this->foodSupplierId)->first();
+	}
 }

@@ -19,102 +19,86 @@ class FoodSupplier extends Model
 	protected $fillable = ['name', 'sourceId'];
 
 
-	public static function getMenu(string $date, string $breakdown): string
+	public static function getMenu(string $date, string $breakdown, int $breakdownId): string
 	{
-		$foodSuppliers = self::all();
-		$foodSuppliersIds = $foodSuppliers->map(function (self $fs) {
-			return $fs->id;
-		});
-
-		$dishes = Dish::query()->where('date', $date)->getQuery()->whereIn('foodSupplierId', $foodSuppliersIds)->get();
-		$categories = FoodCategory::all()->keyBy(function (FoodCategory $fc) {
-			return $fc->id;
-		});
-
+		$result = '';
 		if ($breakdown === 'supplier') {
-			return self::getBySupplier($date);
+			$result = self::getBySupplier($date, $breakdownId);
 		} elseif ($breakdown === 'category') {
-			return self::getByCategories($date);
+			$result = self::getByCategories($date, $breakdownId);
 		} else {
 			throw new Exception("Unknown breakdown: {$breakdown}.");
 		}
 
-
-
-		return '';
+		$result = sprintf("<code>%s</code>", $result);
+		return $result;
 	}
 
-	public static function getBySupplier(string $date): string
+	public static function getBySupplier(string $date, int $foodSupplierId): string
 	{
-		$foodSuppliers = self::all();
-
+		$foodSupplier = FoodSupplier::query()->where('id', $foodSupplierId)->first();
+		$dishes = Dish::query()->where('date', $date)->where('foodSupplierId', $foodSupplierId)->get();
 		$categories = FoodCategory::all()->keyBy(function (FoodCategory $fc) {
 			return $fc->id;
 		});
 		$menu = 'Меню на ' . "\"{$date}\":\n";
-
-		foreach ($foodSuppliers as $foodSupplier) {
-			$menu .= sprintf("Подрядчик \"%s\":\n", $foodSupplier->name);
-			$dishes = Dish::query()->where('date', $date)->where('foodSupplierId', $foodSupplier->id)->get();
-			foreach ($categories as $category) {
-				$categoryDishes = $dishes->filter(function (Dish $dish) use ($category) {
-					if ($dish->categoryId === $category->id) {
-						return true;
-					}
-					return false;
-				});
-
-				if ($categoryDishes->count() !== 0 && $category->sourceId !== 'category_800') {
-					$menu .= sprintf("  Категория \"%s\":\n", $category->name);
-					foreach ($categoryDishes as $categoryDish) {
-						$menu .= sprintf("   -%s\n", $categoryDish->name);
-					}
-					$menu .= "\n";
-				}
+		$menu .= sprintf("Подрядчик \"%s\":\n", $foodSupplier->name);
+		$dishes = Dish::query()->where('date', $date)->where('foodSupplierId', $foodSupplier->id)->get();
+		foreach ($categories as $category) {
+			// костыль, это категория полуфабрикатов
+			if ($category->sourceId === 'category_800') {
+				continue;
 			}
-			$menu .= "\n\n";
+
+			$categoryDishes = $dishes->filter(function (Dish $dish) use ($category) {
+				return $dish->categoryId === $category->id;
+			});
+
+			if ($categoryDishes->count() === 0) {
+				continue;
+			}
+
+			$menu .= sprintf("Категория \"%s\":\n", $category->name);
+			$dishNumber = 1;
+			/** @var Dish $categoryDish */
+			foreach ($categoryDishes as $categoryDish) {
+				$menu .= $categoryDish->getRow($dishNumber);
+				$dishNumber++;
+			}
+			$menu .= "\n";
+		}
+
+		return $menu;
+	}
+
+	public static function getByCategories(string $date, int $categoryId): string
+	{
+		$category = FoodCategory::query()->where('id', $categoryId)->first();
+		$dishes = Dish::query()->where('date', $date)->where('categoryId', $categoryId)->get();
+
+		$menu = 'Меню на ' . "\"{$date}\":\n";
+		$menu .= sprintf("Категория \"%s\":\n", $category->name);
+		$needDishes = $dishes->filter(function (Dish $d) use ($category) {
+			return $d->categoryId == $category->id;
+		});
+		$dishNumber = 1;
+		foreach ($needDishes as $needDish) {
+			$menu .= $needDish->getRow($dishNumber, true);
+			$dishNumber++;
 		}
 		return $menu;
 	}
 
-	public static function getByCategories(string $date): string
+
+	public function getShortName(): string
 	{
-		$foodSuppliers = self::all()->keyBy(function (self $fs) {
-			return $fs->id;
-		});
-
-		$categories = FoodCategory::all()->keyBy(function (FoodCategory $fc) {
-			return $fc->id;
-		});
-		$dishes = Dish::query()->where('date', $date)->get();
-
-		$menu = 'Меню на ' . "\"{$date}\":\n";
-
-		foreach ($categories as $category) {
-			if ($category->sourceId === 'category_800') {
-				continue;
-			}
-			$dishNumber = 1;
-
-			$menu .= sprintf("Категория \"%s\":\n", $category->name);
-			$needDishes = null;
-			foreach ($foodSuppliers as $foodSupplier) {
-				$needDishes = $dishes->filter(function (Dish $d) use ($category, $foodSupplier) {
-					if ($d->categoryId == $category->id && $d->foodSupplierId === $foodSupplier->id) {
-						return true;
-					}
-					return false;
-				});
-				foreach ($needDishes as $needDish) {
-					$menu .= $needDish->getRow($dishNumber);
-					$dishNumber++;
-				}
-			}
-			break;
-			$menu .= "\n";
+		$shortName = '';
+		$name = preg_replace('/(\s+)/', ' ', trim($this->name));
+		$words = explode(' ', $name);
+		foreach ($words as $word) {
+			$firstChar = mb_strtoupper(mb_substr($word, 0, 1));
+			$shortName .= $firstChar;
 		}
-		$result = sprintf("<code>%s</code>", $menu);
-		Log::alert($result);
-		return $result;
+		return $shortName;
 	}
 }
