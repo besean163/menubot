@@ -182,100 +182,42 @@ class FoodSupplier extends Model
 				continue;
 			}
 
-			if (mb_strlen($word) > $maxSymbolsInRow) {
+			$needDivideWord = mb_strlen($word) > $maxSymbolsInRow;
+
+			if ($needDivideWord && !$filled) {
+				$rowLength = mb_strlen($row);
 				$chars = mb_str_split($word);
-				$row = implode('', array_slice($chars, 0, $maxSymbolsInRow));
-				$remnant = implode('', array_slice($chars, $maxSymbolsInRow + 1));
+				$emptyLength = $maxSymbolsInRow - $rowLength;
+				$row = implode('', array_slice($chars, 0, $emptyLength));
+				$remnant = implode('', array_slice($chars, $emptyLength));
 				$remainWords[] = $remnant;
 				$filled = true;
 				continue;
 			}
 
-			$checkRow = $row . '_' . $word;
-			if (mb_strlen($checkRow) <= $maxSymbolsInRow) {
+			if ($row == '') {
+				$checkRow = $word;
+			} else {
+				$checkRow = $row . ' ' . $word;
+			}
+
+			if ((mb_strlen($checkRow) <= $maxSymbolsInRow) && !$filled) {
 				$row = $checkRow;
+			} else {
+				$filled = true;
+				$remainWords[] = $word;
 				continue;
 			}
-		}
 
-		for ($i = 1; $i < count($words); $i++) {
-			$sum = $row . '_' . $words[$i];
-			if (mb_strlen($sum) <= $maxSymbolsInRow) {
-				$row = $sum;
+			if (mb_strlen($row) === $maxSymbolsInRow) {
+				$filled = true;
 			}
 		}
-
-
-
-		$sumText = '';
-		$otherWords = [];
-		$fill = false;
-		// пробуем разбить по пробелам
-		if ($result === '') {
-			$words = preg_split('/(\s+)/', trim($text));
-			foreach ($words as $key => $word) {
-				if ($key === 0) {
-					$sumText = $word;
-					continue;
-				}
-
-				if ($sumText === '') {
-					if (mb_strlen(sprintf("%s %s", $sumText, $word)) <= $maxSymbolsInRow && !$fill) {
-						$sumText = sprintf("%s %s", $sumText, $word);
-						continue;
-					} else {
-						$fill = true;
-						array_push($otherWords, $word);
-					}
-				}
-			}
-		}
-		$result = $sumText;
-		echo $sumText . "\n";
-		print_r($otherWords);
-
-		if ($result === '' && $sumText !== '' && !empty($otherWords)) {
-			$result = $sumText . "\n";
-			// echo implode(' ', $otherWords) . "\n";
-			$result .= self::getStringWithShift(implode(' ', $otherWords), $maxSymbolsInRow, $shift);
+		if (!empty($remainWords)) {
+			$row .= "\n";
+			$row .= self::getStringWithShift(implode(' ', $remainWords), $maxSymbolsInRow, $needCut);
 		}
 
-		if ($result === '') {
-			$chars = mb_str_split($result);
-			$newWord = '';
-			for ($i = 0; $i < $maxSymbolsInRow - 3; $i++) {
-				$newWord .= $chars[$i];
-			}
-			$result = $newWord . '...';
-		}
-
-
-		return $result . "\n";
-	}
-
-	public function newFunc($text, $limit): string
-	{
-		// если меньше или равен оставляем все как есть без изменений
-		if (mb_strlen($text) <= $limit || trim($text) === '') {
-			return $text;
-		}
-
-		$words = preg_split('/(\s+)/', trim($text));
-		$word = $words[0];
-
-		if (mb_strlen($word) > $limit) {
-			$chars = mb_str_split($word);
-			$row = implode('', array_slice($chars, 0, $limit));
-			$remnant = implode('', array_slice($chars, $limit + 1));
-			$remainWords[] = $remnant;
-			$filled = true;
-			continue;
-		}
-
-
-
-
-
-		return '';
+		return $row;
 	}
 }
