@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Facade;
 use lib\ObedApi;
+use lib\Utils\Str;
 
 class testCommand extends Command
 {
@@ -32,10 +33,11 @@ class testCommand extends Command
      */
     public function handle()
     {
-        // $msg = FoodSupplier::getByCategories('2022-12-12');
-        $text = 'ывафыапвап text вапвыаыврвп sdgdf hfg hfhdfgh';
-        $msg = FoodSupplier::getStringWithShift($text, 5);
-        echo $msg;
+        $msg = FoodSupplier::getByCategories('2022-12-12');
+        // $text = 'рождество text  приходит hfg hfhdfgh';
+        // $msg = Str::explodeStringByLimit($text, 20);
+        echo "\n" . $msg;
+        // print_r($msg);
         return Command::SUCCESS;
     }
 }

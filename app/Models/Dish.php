@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use lib\Utils\Str;
 
 class Dish extends Model
 {
@@ -70,9 +71,74 @@ class Dish extends Model
 		}
 	}
 
-	public function getRow(): string
+	public function getRow(int $rowNumber): string
 	{
-		return $this->name;
+		// в общем 40 должно быть
+		// лимит сиволов на строку номера
+		$numberLimit = 3;
+		// лимит сиволов на строку имени
+		$nameLimit = 15;
+		// лимит сиволов на строку веса
+		$weightLimit = 6;
+		// лимит сиволов на строку разделителя данных и цены
+		$dataPriceSeparatorLimit = 3;
+		// лимит сиволов на строку цены
+		$priceLimit = 6;
+		// лимит сиволов на строку разделителя цены и валюты этой цены
+		$priceValuteSeparatorLimit = 1;
+		// лимит сиволов на строку валюты цены
+		$valuteLimit = 2;
+
+		$result =  '';
+		$weightText = $this->weight . $this->weightDimension;
+		$priceText = sprintf('%.2f', $this->price);
+
+		$numberRow = str_pad($rowNumber . '.', $numberLimit, ' ', STR_PAD_LEFT);
+		$weightRow = Str::mb_str_pad($weightText, $weightLimit, ' ', STR_PAD_LEFT);
+		$dataPriceSeparatorRow = str_pad('-', $dataPriceSeparatorLimit, ' ', STR_PAD_BOTH);
+		$priceRow = str_pad($priceText, $priceLimit, ' ', STR_PAD_LEFT);
+		$priceValuteSeparatorRow = str_pad('', $priceValuteSeparatorLimit);
+		$valuteRow = str_pad('р.', $valuteLimit);
+
+		$nameRows = Str::explodeStringByLimit($this->name, $nameLimit);
+		if (!empty($nameRows)) {
+			foreach ($nameRows as $key => $nameRow) {
+				$numberPart = str_pad('', strlen($numberRow));
+				$namePart = Str::mb_str_pad($nameRow, $nameLimit);
+				$weightPart = Str::mb_str_pad('', mb_strlen($weightRow));
+				$dataPriceSeparatorPart = str_pad('', strlen($dataPriceSeparatorRow));
+				$pricePart = str_pad('', strlen($priceRow));
+				$priceValuteSeparatorPart = str_pad('', strlen($priceValuteSeparatorRow));
+				$valutePart = str_pad('', strlen($valuteRow));
+
+				$row = '';
+				if ($key === 0) {
+					$numberPart = $numberRow;
+				}
+
+				if (next($nameRows) === false) {
+					$weightPart = $weightRow;
+					$dataPriceSeparatorPart = $dataPriceSeparatorRow;
+					$pricePart = $priceRow;
+					$priceValuteSeparatorPart = $priceValuteSeparatorRow;
+					$valutePart = $valuteRow;
+				}
+
+				$row = sprintf(
+					"%s%s%s%s%s%s%s\n",
+					$numberPart,
+					$namePart,
+					$weightPart,
+					$dataPriceSeparatorPart,
+					$pricePart,
+					$priceValuteSeparatorPart,
+					$valutePart
+				);
+				$result .= $row;
+			}
+		}
+
+		return $result;
 	}
 
 	// public function toArray(): array

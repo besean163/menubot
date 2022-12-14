@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\Log;
+use lib\Utils\Str;
 
 class FoodSupplier extends Model
 {
@@ -104,120 +106,15 @@ class FoodSupplier extends Model
 					return false;
 				});
 				foreach ($needDishes as $needDish) {
-					// $menu .= sprintf("  %s (%s)\n", $needDish->name, $foodSupplier->name);
-
-					$numberPart = sprintf("%d. ", $dishNumber);
-					$namePart = self::mb_str_pad($needDish->name, 25, ' ', STR_PAD_RIGHT);
-					// $namePart = self::mb_str_pad(fake('us')->name(), 30, '.', STR_PAD_RIGHT);
-					$pricePart = str_pad(sprintf("%.2f р.", $needDish->price), 10, ' ', STR_PAD_LEFT);
-					$menu .= sprintf(
-						"%s%s%s\n",
-						$numberPart,
-						$namePart,
-						$pricePart
-					);
-					// $menu .= sprintf("%d. \n", $needDish->name, $foodSupplier->name);
+					$menu .= $needDish->getRow($dishNumber);
 					$dishNumber++;
 				}
 			}
+			break;
 			$menu .= "\n";
 		}
-		return '<code>' . $menu . '</code>';
-	}
-
-	private static function mb_str_pad($input, $pad_length, $pad_string = ' ', $pad_type = STR_PAD_RIGHT)
-	{
-		$diff = strlen($input) - mb_strlen($input);
-		return str_pad($input, $pad_length + $diff, $pad_string, $pad_type);
-	}
-
-	public static function getStringWithShift(string $text, int $maxSymbolsInRow = 10, $needCut = false): string
-	{
-		/*
-			Это функция переноса:
-			- длина строки ограничивается переданным числом
-			- часть строки больше числа либо обрезается либо рекурсивно передается этой же функции, это решается относительно 3го параметра
-
-			Последовательность:
-			1. Проверяем строку по длине, если меньше указаного числа, значит возвращаем эту же строку
-			2. Если нет, пытаемся разбить на слова по пробелам
-			3. Проверяем первое слово. 
-				а. Если оно длинее лимита: 
-					- Обрезаем его или делим для переноса
-				б. Если короче:
-					- Сохраняем в результирующщую строку
-					- Идем дальше по массиву слов
-					- Проверяем если сумма результирующей строки и нового слова
-						1. если меньше лимита
-							- идем дальше по массиву
-						2. если больше 
-							- сохраняем результирующую строку без нового слова в массиве результата
-							- остальные слова строки сохраняем в массив остатков
-							- объединяем массив остатков в новую строку и передаем в функцию рекурсивно
-			4. Соединяем массив результата переносом строки в строку
-			5. возвращаем строку
-		*/
-
-		$cutSymbol = '...';
-		$cutSymbolLength = mb_strlen($cutSymbol);
-
-		if ($maxSymbolsInRow < $cutSymbolLength && $needCut) {
-			throw new Exception(sprintf("Max symbols count should be more then %d.", $cutSymbolLength));
-		}
-
-		// если меньше или равен оставляем все как есть без изменений
-		if (mb_strlen($text) <= $maxSymbolsInRow || trim($text) === '') {
-			return $text;
-		}
-
-		$resultRows = [];
-		$words = preg_split('/(\s+)/', trim($text));
-
-		$filled = false;
-		$row = '';
-		$remainWords = [];
-		foreach ($words as $word) {
-			if ($filled) {
-				$remainWords[] = $word;
-				continue;
-			}
-
-			$needDivideWord = mb_strlen($word) > $maxSymbolsInRow;
-
-			if ($needDivideWord && !$filled) {
-				$rowLength = mb_strlen($row);
-				$chars = mb_str_split($word);
-				$emptyLength = $maxSymbolsInRow - $rowLength;
-				$row = implode('', array_slice($chars, 0, $emptyLength));
-				$remnant = implode('', array_slice($chars, $emptyLength));
-				$remainWords[] = $remnant;
-				$filled = true;
-				continue;
-			}
-
-			if ($row == '') {
-				$checkRow = $word;
-			} else {
-				$checkRow = $row . ' ' . $word;
-			}
-
-			if ((mb_strlen($checkRow) <= $maxSymbolsInRow) && !$filled) {
-				$row = $checkRow;
-			} else {
-				$filled = true;
-				$remainWords[] = $word;
-				continue;
-			}
-
-			if (mb_strlen($row) === $maxSymbolsInRow) {
-				$filled = true;
-			}
-		}
-		if (!empty($remainWords)) {
-			$row .= "\n";
-			$row .= self::getStringWithShift(implode(' ', $remainWords), $maxSymbolsInRow, $needCut);
-		}
-
-		return $row;
+		$result = sprintf("<code>%s</code>", $menu);
+		Log::alert($result);
+		return $result;
 	}
 }
