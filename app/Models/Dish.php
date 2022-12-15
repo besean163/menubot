@@ -145,11 +145,24 @@ class Dish extends Model
 
 				$row .= $numberPart;
 				$row .= $namePart;
-				$row .= $weightPart;
-				$row .= $dataPriceSeparatorPart;
-				$row .= $pricePart;
-				$row .= $priceValuteSeparatorPart;
-				$row .= $valutePart;
+				if (trim($weightPart) != '') {
+					$row .= $weightPart;
+				}
+				if (trim($dataPriceSeparatorPart) != '') {
+					$row .= $dataPriceSeparatorPart;
+				}
+
+				if (trim($pricePart) != '') {
+					$row .= $pricePart;
+				}
+
+				if (trim($priceValuteSeparatorPart) != '') {
+					$row .= $priceValuteSeparatorPart;
+				}
+
+				if (trim($valutePart) != '') {
+					$row .= $valutePart;
+				}
 				if ($needMark) {
 					$row .= $supplierMarkPart;
 				}
