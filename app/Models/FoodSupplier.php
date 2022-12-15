@@ -75,16 +75,25 @@ class FoodSupplier extends Model
 	{
 		$category = FoodCategory::query()->where('id', $categoryId)->first();
 		$dishes = Dish::query()->where('date', $date)->where('categoryId', $categoryId)->get();
+		$foodSupplierIds = $dishes->groupBy(function (Dish $d) {
+			return $d->foodSupplierId;
+		})->keys();
+
+		$foodSuppliers = FoodSupplier::query()->getQuery()->whereIn('id', $foodSupplierIds)->get();
 
 		$menu = 'Меню на ' . "\"{$date}\":\n";
-		$menu .= sprintf("Категория \"%s\":\n", $category->name);
-		$needDishes = $dishes->filter(function (Dish $d) use ($category) {
-			return $d->categoryId == $category->id;
-		});
-		$dishNumber = 1;
-		foreach ($needDishes as $needDish) {
-			$menu .= $needDish->getRow($dishNumber, true);
-			$dishNumber++;
+		$menu .= sprintf("Категория \"%s\":\n\n", $category->name);
+		foreach ($foodSuppliers as $foodSupplier) {
+			$menu .= sprintf("Подрядчик \"%s\":\n", $foodSupplier->name);
+			$needDishes = $dishes->filter(function (Dish $d) use ($category, $foodSupplier) {
+				return $d->categoryId == $category->id && $d->foodSupplierId === $foodSupplier->id;
+			});
+			$dishNumber = 1;
+			foreach ($needDishes as $needDish) {
+				$menu .= $needDish->getRow($dishNumber);
+				$dishNumber++;
+			}
+			$menu .= "\n";
 		}
 		return $menu;
 	}
