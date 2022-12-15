@@ -32,10 +32,13 @@ class StartCommand extends UserCommand
 
 	public function execute(): ServerResponse
 	{
-		Log::info($this->getUpdate()->getMessage()->getChat()->getId());
+		$message = $this->update->getMessage();
+		$userName = $message->getFrom()->getUsername();
+		$chatId = $this->getUpdate()->getMessage()->getChat()->getId();
+		Log::info("User '{$userName}' start.");
 		return Request::sendMessage([
-			'chat_id' => '275665865',
-			'text' => 'work'
+			'chat_id' => $chatId,
+			'text' => 'Привет. Вы добавлены.'
 		]);
 	}
 }
