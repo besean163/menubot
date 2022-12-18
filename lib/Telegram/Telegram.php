@@ -10,6 +10,7 @@ use lib\Telegram\Commands\SystemCommands\GenericmessageCommand;
 use lib\Telegram\Commands\GetMenuCommand;
 use lib\Telegram\Commands\StartCommand;
 use lib\Telegram\Commands\SystemCommand;
+use lib\Telegram\Commands\SystemCommands\GenericCommand;
 use lib\Telegram\Dialogs\Dialog;
 use Longman\TelegramBot\DB;
 use Longman\TelegramBot\Entities\ServerResponse;
@@ -32,6 +33,7 @@ class Telegram extends BaseTelegram
 		],
 		Command::AUTH_ADMIN  => [],
 		Command::AUTH_SYSTEM => [
+			self::GENERIC_COMMAND => GenericCommand::class,
 			self::GENERIC_MESSAGE_COMMAND => GenericmessageCommand::class
 		],
 	];
