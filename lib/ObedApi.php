@@ -111,61 +111,6 @@ class ObedApi
 		return $data;
 	}
 
-	/* function getMenuList(string $date): string
-	{
-		$cafesData = $this->getCafeData();
-
-
-		$params = [
-			RequestOptions::QUERY => [
-				'date' => $date
-			],
-			RequestOptions::COOKIES => $this->cookies
-		];
-
-		$dishNamePattern = '/class="ob-supplier-complex-tile__title\s\C+?>(\C+?)</';
-		$weightPattern = '/<span class="ob-supplier-complex-tile__grams">\((.+?)\)/';
-		$costPattern = '/<input type="hidden" class="price_.+?value="(.+?)"/';
-		$menu = '';
-		foreach ($cafesData as $cafeData) {
-			$url = self::BASE_URL . 'suppliers/' . $cafeData['id'] . '/menu';
-			$response = $this->client->get($url, $params);
-			$page = $response->getBody()->getContents();
-			preg_match_all($dishNamePattern, $page, $dishNameMatches);
-			preg_match_all($weightPattern, $page, $weightMatches);
-			preg_match_all($costPattern, $page, $costMatches);
-			$menu .= $cafeData['name'] . ':' . "\n";
-			$dishes = $dishNameMatches[1];
-			$weights = $weightMatches[1];
-			$costs = $costMatches[1];
-			for ($i = 0; $i < count($dishes); $i++) {
-				$numberPart = str_pad(sprintf("  %d.", $i + 1), 5);
-				$namePart = self::mb_str_pad(sprintf("%s", $dishes[$i]), 55);
-				$weightPart = self::mb_str_pad(sprintf("(%s)", $weights[$i]), 15);
-				$costPart = self::mb_str_pad(sprintf("- %.2f руб.", floatval($costs[$i])), 10);
-				$menu .= sprintf(
-					"%s%s%s%s\n",
-					$numberPart,
-					$namePart,
-					$weightPart,
-					$costPart
-				);
-				// $menu .= sprintf(
-				// 	"\t%d. %s (%s) - %.2f руб.\n",
-				// 	$i + 1,
-				// 	$dishes[$i],
-				// 	$weights[$i],
-				// 	floatval($costs[$i])
-				// );
-			}
-			if (next($cafeData) !== false) {
-				$menu .= "\n";
-			}
-		}
-
-		return $menu;
-	} */
-
 	public function syncDishes(FoodSupplier $foodSupplier, string $date): void
 	{
 		Log::info(sprintf("Date '%s'. Foodsupplier '%s'. Start download dishes...", $date, $foodSupplier->name));
