@@ -35,23 +35,6 @@ class testCommand extends Command
      */
     public function handle()
     {
-        // $msg = FoodSupplier::getBySupplier('2022-12-15', 2);
-        // $msg = FoodSupplier::getByCategories('2022-12-15', 20);
-        // $text = 'рождество text  приходит hfg hfhdfgh';
-        // $msg = Str::explodeStringByLimit($text, 20);
-        // echo "\n" . $msg;
-
-        $client = new Client();
-        $client->post('https://api.telegram.org/bot1858930058:AAFRaVAE3XyxFsiREylp9WKP-BXDiuZ5cms/sendMessage', [
-            RequestOptions::HEADERS => [
-                'Content-Type' => 'application/json'
-            ],
-            RequestOptions::BODY => json_encode([
-                'chat_id' => '275665865',
-                'text' => "\u{274c}",
-            ])
-        ]);
-        // print_r($msg);
         return Command::SUCCESS;
     }
 }
