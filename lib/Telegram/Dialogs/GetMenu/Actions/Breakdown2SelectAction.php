@@ -68,6 +68,12 @@ class Breakdown2SelectAction extends Action
 			array_push($line, $button);
 			array_push($keyboard, $line);
 		}
+		// array_push($keyboard, [
+		// 	[
+		// 		'text' => "\u{274c}",
+		// 		'callback_data' => 'close'
+		// 	]
+		// ]);
 
 		$response =  Request::sendMessage([
 			'chat_id' => $this->chatId,

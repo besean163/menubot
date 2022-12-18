@@ -9,7 +9,6 @@ use Longman\TelegramBot\Request;
 
 abstract class Action
 {
-
 	public DialogHandler $parentHandler;
 	public int $id;
 	public string $type;
@@ -100,7 +99,6 @@ abstract class Action
 			$this->prev_message_id = null;
 			$this->finish();
 			$this->cleanServiceMessages();
-			// $this->sendSuccessMessage();
 		}
 	}
 
