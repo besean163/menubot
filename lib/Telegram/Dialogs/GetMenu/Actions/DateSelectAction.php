@@ -39,7 +39,7 @@ class DateSelectAction extends Action
 		return $result;
 	}
 
-	protected function sendMessage(): void
+	protected function ask(): void
 	{
 		$values = $this->getValidValues();
 		$keyboard = [];
@@ -63,6 +63,6 @@ class DateSelectAction extends Action
 
 		/** @var Message $result */
 		$result = $response->getResult();
-		$this->prev_message_id = $result->getMessageId();
+		$this->sended_message_ids[] = $result->getMessageId();
 	}
 }

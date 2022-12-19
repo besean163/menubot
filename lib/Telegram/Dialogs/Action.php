@@ -3,7 +3,7 @@
 namespace lib\Telegram\Dialogs;
 
 use Exception;
-use Illuminate\Database\Console\Migrations\StatusCommand;
+use Illuminate\Support\Facades\Log;
 use Longman\TelegramBot\Entities\Update;
 use Longman\TelegramBot\Request;
 
@@ -14,14 +14,15 @@ abstract class Action
 	public string $type;
 	public string $status;
 	public ?string $result = null;
-	public ?string $prev_message_id = null;
-	public array $service_message_ids = [];
+	public array $sended_message_ids = [];
 	protected string $chatId;
 
 	const STATUS_WAIT = 'wait';
 	const STATUS_FINISH = 'finish';
 
-	public function __construct(DialogHandler $handler, int $id, string $type, string $status, ?string $result = null, ?string $prev_message_id = null, array $service_message_ids = [])
+	const CLOSE_MARK = 'close';
+
+	public function __construct(DialogHandler $handler, int $id, string $type, string $status, ?string $result = null, array $sended_message_ids = [])
 	{
 		$this->parentHandler = $handler;
 		$this->id = $id;
@@ -29,8 +30,7 @@ abstract class Action
 		$this->type = $type;
 		$this->setStatus($status);
 		$this->result = $result;
-		$this->prev_message_id = $prev_message_id;
-		$this->service_message_ids = $service_message_ids;
+		$this->sended_message_ids = $sended_message_ids;
 	}
 
 	public function setStatus(string $status): void
@@ -57,8 +57,7 @@ abstract class Action
 		$type = $config['type'] ?? null;
 		$status = $config['status'] ?? null;
 		$result = $config['result'] ?? null;
-		$prev_message_id = $config['prev_message_id'] ?? null;
-		$service_message_ids = $config['service_message_ids'] ?? [];
+		$sended_message_ids = $config['sended_message_ids'] ?? [];
 
 		if ($type === null || $status === null) {
 			throw new Exception("Need type and status data.");
@@ -68,12 +67,12 @@ abstract class Action
 			throw new Exception(sprintf("Type not match. (expect: %s, actual:%s).", static::type(), $type));
 		}
 
-		return new static($handler, $id, $type, $status, $result, $prev_message_id, $service_message_ids);
+		return new static($handler, $id, $type, $status, $result, $sended_message_ids);
 	}
 
 	public function firstLaunch(): void
 	{
-		$this->sendMessage();
+		$this->ask();
 	}
 
 	public function handle(Update $update): void
@@ -88,17 +87,19 @@ abstract class Action
 			$data = $callback->getData();
 		}
 
-		if (!in_array($data, array_keys($this->getValidValues())) || !$data) {
-			$this->cleanServiceMessages();
-			$this->deletePrevMessage();
+		$this->cleanSendedMessages();
+		if (!$this->isCloseData($data) && (!in_array($data, array_keys($this->getValidValues())) || !$data)) {
 			$this->sendWarningMessage();
-			$this->sendMessage();
+			$this->ask();
 		} else {
-			$this->deletePrevMessage();
 			$this->result = $data;
-			$this->prev_message_id = null;
-			$this->finish();
-			$this->cleanServiceMessages();
+
+			if (($this->needClose() && $this->isCloseData($data)) || !$this->needClose()) {
+				$this->finish();
+			} else {
+				$this->answer();
+				$this->ask();
+			}
 		}
 	}
 
@@ -129,20 +130,19 @@ abstract class Action
 			'type' => $this->type,
 			'status' => $this->status,
 			'result' => $this->result,
-			'prev_message_id' => $this->prev_message_id,
-			'service_message_ids' => $this->service_message_ids,
+			'sended_message_ids' => $this->sended_message_ids,
 		];
 	}
 
-	protected function cleanServiceMessages(): void
+	protected function cleanSendedMessages(): void
 	{
-		foreach ($this->service_message_ids as $serviceMessageId) {
+		foreach ($this->sended_message_ids as $sended_message_id) {
 			Request::deleteMessage([
 				'chat_id' => $this->chatId,
-				'message_id' => $serviceMessageId,
+				'message_id' => $sended_message_id,
 			]);
 		}
-		$this->service_message_ids = [];
+		$this->sended_message_ids = [];
 	}
 
 	protected function sendWarningMessage(): void
@@ -154,19 +154,9 @@ abstract class Action
 
 		/** @var Message $result */
 		$result = $response->getResult();
-		$this->service_message_ids[] = $result->getMessageId();
+		$this->sended_message_ids[] = $result->getMessageId();
 	}
 
-	abstract protected function getValidValues(): array;
-
-	protected function deletePrevMessage(): void
-	{
-		Request::deleteMessage([
-			'chat_id' => $this->chatId,
-			'message_id' => $this->prev_message_id,
-		]);
-	}
-	abstract protected function sendMessage(): void;
 
 	protected function getPrevAction(): Action
 	{
@@ -224,4 +214,24 @@ abstract class Action
 	{
 		return $this->id === 0;
 	}
+
+	public function isCloseData(?string $data): bool
+	{
+		return $data === self::CLOSE_MARK;
+	}
+
+	/** Метод для возврата пользователю результата его ответа */
+	protected function answer(): void
+	{
+		Request::emptyResponse();
+	}
+
+	protected function needClose(): bool
+	{
+		return false;
+	}
+
+	// abstract protected function sendMessage(): void;
+	abstract protected function getValidValues(): array;
+	abstract protected function ask(): void;
 }

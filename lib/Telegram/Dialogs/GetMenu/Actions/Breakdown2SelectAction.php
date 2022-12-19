@@ -3,6 +3,7 @@
 namespace lib\Telegram\Dialogs\GetMenu\Actions;
 
 use App\Models\Dish;
+use App\Models\FoodSupplier;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use lib\Date;
@@ -47,7 +48,7 @@ class Breakdown2SelectAction extends Action
 		return $result;
 	}
 
-	protected function sendMessage(): void
+	protected function ask(): void
 	{
 		$prevResult = $this->getPrevAction()->getResult();
 
@@ -68,12 +69,12 @@ class Breakdown2SelectAction extends Action
 			array_push($line, $button);
 			array_push($keyboard, $line);
 		}
-		// array_push($keyboard, [
-		// 	[
-		// 		'text' => "\u{274c}",
-		// 		'callback_data' => 'close'
-		// 	]
-		// ]);
+		array_push($keyboard, [
+			[
+				'text' => "\u{274c}",
+				'callback_data' => 'close'
+			]
+		]);
 
 		$response =  Request::sendMessage([
 			'chat_id' => $this->chatId,
@@ -85,6 +86,29 @@ class Breakdown2SelectAction extends Action
 
 		/** @var Message $result */
 		$result = $response->getResult();
-		$this->prev_message_id = $result->getMessageId();
+		$this->sended_message_ids[] = $result->getMessageId();
+	}
+
+	protected function answer(): void
+	{
+		$prevResults  = $this->getPrevActionResults();
+
+		$date = $prevResults[0];
+		$breakdown = $prevResults[1];
+		$breakdownId = $this->result;
+		$menu = FoodSupplier::getMenu($date, $breakdown, $breakdownId);
+
+		Request::sendMessage([
+			'chat_id' => $this->chatId,
+			'text' => $menu,
+			'parse_mode' => 'html',
+		]);
+
+		$this->result = null;
+	}
+
+	protected function needClose(): bool
+	{
+		return true;
 	}
 }

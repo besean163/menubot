@@ -19,11 +19,6 @@ class BreakdownSelectAction extends Action
 		return 'breakdown_select';
 	}
 
-	public function firstLaunch(): void
-	{
-		$this->sendMessage();
-	}
-
 	protected function getValidValues(): array
 	{
 		return [
@@ -32,7 +27,7 @@ class BreakdownSelectAction extends Action
 		];
 	}
 
-	protected function sendMessage(): void
+	protected function ask(): void
 	{
 		$values = $this->getValidValues();
 		$keyboard = [];
@@ -56,6 +51,6 @@ class BreakdownSelectAction extends Action
 
 		/** @var Message $result */
 		$result = $response->getResult();
-		$this->prev_message_id = $result->getMessageId();
+		$this->sended_message_ids[] = $result->getMessageId();
 	}
 }
