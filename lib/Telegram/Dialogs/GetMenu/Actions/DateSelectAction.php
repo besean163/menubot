@@ -30,11 +30,22 @@ class DateSelectAction extends Action
 
 	protected function getValidValues(): array
 	{
-		$dates = $this->needThisWeek() ? Date::getThisWeekWorkDays() : Date::getNextWeekWorkDays();
+		$weekDates = $this->needThisWeek() ? Date::getThisWeekWorkDays() : Date::getNextWeekWorkDays();
+
+		$today = Date::today();
 		$result = [];
-		foreach ($dates as $date) {
-			$cyrWeekDay = (new Date($date))->getCyrillicWeekDay();
-			$result[$date] = sprintf("%s (%s)", $cyrWeekDay, $date);
+		foreach ($weekDates as $date) {
+			$isToday = $date === $today->getDateISO();
+			if ($isToday) {
+				$cyrWeekDay = "Сегодня";
+			} else {
+				$cyrWeekDay = (new Date($date))->getCyrillicWeekDay();
+			}
+			$text = sprintf("%s (%s)", $cyrWeekDay, $date);
+			if ($isToday) {
+				$text = sprintf("\u{2755} %s \u{2755}", $text);
+			}
+			$result[$date] = $text;
 		}
 		return $result;
 	}

@@ -35,6 +35,33 @@ class testCommand extends Command
      */
     public function handle()
     {
+        $image = imagecreate(500, 500);
+        imagefill($image, 0, 0, imagecolorallocate($image, 20, 150, 130));
+        imagefilledarc(
+            $image,
+            200,
+            200,
+            150,
+            150,
+            0,
+            300,
+            imagecolorallocate($image, 30, 100, 15),
+            IMG_ARC_EDGED
+        );
+        imagesetthickness($image, 3);
+        imagefilledarc(
+            $image,
+            200,
+            200,
+            150,
+            150,
+            0,
+            300,
+            imagecolorallocate($image, 0, 0, 0),
+            IMG_ARC_NOFILL | IMG_ARC_EDGED
+        );
+        // imagefill($image, 100, 90, imagecolorallocate($image, 50, 50, 50));
+        imagejpeg($image, '/home/besean/testJPEG.jpg', 100);
         return Command::SUCCESS;
     }
 }

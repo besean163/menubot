@@ -71,7 +71,7 @@ class Breakdown2SelectAction extends Action
 		}
 		array_push($keyboard, [
 			[
-				'text' => "\u{274c}",
+				'text' => "\u{274c}  ЗАКРЫТЬ  \u{274c}",
 				'callback_data' => 'close'
 			]
 		]);

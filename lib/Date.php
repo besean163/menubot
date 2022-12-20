@@ -53,6 +53,11 @@ class Date extends DateTimeImmutable
 		return new self('today');
 	}
 
+	public static function now(): self
+	{
+		return new self('now');
+	}
+
 	public function addDays(int $days): self
 	{
 		$inteval = new DateInterval("P" . abs($days) . "D");
