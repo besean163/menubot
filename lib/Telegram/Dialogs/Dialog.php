@@ -14,6 +14,7 @@ class Dialog extends Model
 	use HasFactory;
 
 	const DIALOG_TYPE_GET_MENU = 'get_menu';
+	const DIALOG_TYPE_REG = 'reg';
 
 	const DIALOG_STATUS_WAIT = 'wait';
 	const DIALOG_STATUS_DONE = 'done';

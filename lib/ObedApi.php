@@ -192,4 +192,107 @@ class ObedApi
 
 		Log::info(sprintf("%s - end download dishes.", $foodSupplier->name));
 	}
+
+	public function getOrderIds(string $date): array
+	{
+		$url = 'https://www.obed.ru/obed/';
+		$params = [
+			RequestOptions::QUERY => [
+				'date' => $date
+			],
+			RequestOptions::COOKIES => $this->cookies
+		];
+		$page = $this->client->get($url, $params)->getBody()->getContents();
+		// Log::notice($page);
+		$pattern = '/<a class="item-card" href="\/suppliers\/(.+?)\/menu\/\?staff_id=.+?&order_id=(.+?)">/';
+		preg_match_all($pattern, $page, $matches);
+		Log::alert($matches);
+
+		return [];
+	}
+
+
+	public function getOrder(string $orderId): array
+	{
+		$orderData = [];
+		Log::debug('Order id:' . $orderId);
+		$url = 'https://www.obed.ru/staff/viewOrder/';
+		$params = [
+			RequestOptions::QUERY => [
+				'id' => $orderId,
+				'type' => 2
+			],
+			RequestOptions::COOKIES => $this->cookies
+		];
+		$page = $this->client->get($url, $params)->getBody()->getContents();
+		// Log::notice($page);
+
+		$dishNamePattern = '/<p class="ob-result-table__name">(.+)\(.+?\)</';
+		$countPattern = '/<span class="ob-result-table_color">X<\/span>(.+?)</';
+		$pricePattern = '/<td class="ob-table__row-total">\n.+?(\S+)/';
+		$sumPattern = '/<td class="ob-table__row-sum">\n.+?(\S+)/';
+
+		preg_match_all($dishNamePattern, $page, $dishNamesMatches);
+		preg_match_all($countPattern, $page, $countMatches);
+		preg_match_all($pricePattern, $page, $priceMatches);
+		preg_match_all($sumPattern, $page, $sumMatches);
+
+		$dishNames = $dishNamesMatches[1];
+		$counts = $countMatches[1];
+		$prices = $priceMatches[1];
+		$sums = $sumMatches[1];
+
+		// Log::alert($dishNames);
+		// Log::alert($counts);
+		// Log::alert($prices);
+		// Log::alert($summs);
+
+		$dishsData = [];
+		for ($i = 0; $i < count($dishNames); $i++) {
+			$name = trim($dishNames[$i]);
+			$count = trim($counts[$i]);
+			$price = trim($prices[$i]);
+			$sum = trim($sums[$i]);
+
+			$dishData = [
+				'name' => $name,
+				'count' => $count,
+				'price' => $price,
+				'sum' => $sum
+			];
+			array_push($dishsData, $dishData);
+
+			$dish = Dish::query()->where('name', $name)->first();
+			Log::critical([
+				'id' => $dish->id,
+				'baseName' => $dish->name,
+				'basePrice' => $dish->price
+			]);
+		}
+
+		if (!empty($dishData)) {
+			$orderData = [
+				'orderId' => $orderId,
+				'orderDishes' => $dishsData
+			];
+		}
+		Log::debug($orderData);
+
+		return $orderData;
+	}
+
+	public function checkConnect(): bool
+	{
+		$url = self::BASE_URL . 'obed/';
+		$params = [
+			RequestOptions::COOKIES => $this->cookies
+		];
+
+		$page = $this->client->get($url, $params)->getBody()->getContents();
+
+		$loginFalsePattern = '/<span class="ob-ico ob-ico-user" title="Вход"><\/span>/';
+		$isLoginPage = (bool) preg_match($loginFalsePattern, $page);
+
+		return !$isLoginPage;
+	}
 }
