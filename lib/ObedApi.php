@@ -212,6 +212,37 @@ class ObedApi
 	}
 
 
+	public function getExistOrderIds(string $date): array
+	{
+		$date = new Date($date);
+		$needDateFormat = $date->format('d.m.Y');
+		Log::info($needDateFormat);
+
+		$url  = 'https://www.obed.ru/staff/orders/';
+		$params = [
+			RequestOptions::QUERY => [
+				'date_from' => $needDateFormat,
+				'date_to' => $needDateFormat
+			],
+			RequestOptions::COOKIES => $this->cookies
+		];
+
+		$page = $this->client->get($url, $params)->getBody()->getContents();
+
+		$orderPattern = '/\/staff\/viewOrder\/\?id=(\d+).+?type=(\d+)/';
+		$supplierSourceIdPattern = '/<a href="\/suppliers\/(.+)\/menu\/">(.+?)<\/a>/';
+
+		// Log::notice($page);
+
+		preg_match_all($orderPattern, $page, $orderDataMatches);
+		preg_match_all($supplierSourceIdPattern, $page, $supplierSourceIdMatches);
+		Log::info($orderDataMatches);
+		Log::info($supplierSourceIdMatches);
+
+		return [];
+	}
+
+
 	public function getOrder(string $orderId): array
 	{
 		$orderData = [];

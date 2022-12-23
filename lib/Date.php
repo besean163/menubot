@@ -101,4 +101,35 @@ class Date extends DateTimeImmutable
 	{
 		return $this->getWeekDay() === 1 ? $this : $this->addDays(1 - $this->getWeekDay());
 	}
+
+	public static function parseFromHumanReadFromObed(string $humanReadDate): self
+	{
+		// $monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+		$monthNamesShort = [
+			"янв" => '01',
+			"фев" => '02',
+			"мар" => '03',
+			"апр" => '04',
+			"май" => '05',
+			"июн" => '06',
+			"июл" => '07',
+			"авг" => '08',
+			"сен" => '09',
+			"окт" => '10',
+			"ноя" => '11',
+			"дек" => '12'
+		];
+
+		$pattern = '/(\d+).+?(\W+?)[,\s]+(\W+)/';
+		preg_match($pattern, $humanReadDate, $matches);
+		$dayNumber = (int) $matches[1];
+		$monthShort = mb_strtolower($matches[2]);
+		// $dayShortName = $matches[3];
+
+		$nowYear = self::today()->format('Y');
+		$monthNumber = $monthNamesShort[$monthShort];
+		$detectDate = $nowYear . '-' . $monthNumber . '-' . $dayNumber;
+
+		return new self($detectDate);
+	}
 }
